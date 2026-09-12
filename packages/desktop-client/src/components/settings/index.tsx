@@ -30,6 +30,7 @@ import { ExperimentalFeatures } from './Experimental';
 import { ExportBudget } from './Export';
 import { FormatSettings } from './Format';
 import { LanguageSettings } from './LanguageSettings';
+import { MemorySettings } from './Memory';
 import { RepairTransactions } from './RepairTransactions';
 import { ResetCache } from './Reset';
 import { ThemeSettings } from './Themes';
@@ -228,6 +229,7 @@ export function Settings() {
             is single-device and has no server to talk to. */}
         <About />
         <AIAssistantSettings />
+        <MemorySettings />
         <ThemeSettings />
         <FormatSettings />
         {isCurrencyExperimentalEnabled && <CurrencySettings />}

@@ -245,14 +245,17 @@ export default defineConfig(async ({ mode, command }) => {
   // by anyone who opens devtools on a deployed build.
   const repoRootEnv = loadEnv(mode, path.resolve(__dirname, '../..'), '');
   const assistantKeys = {
-    'import.meta.env.KNIGHTFALL_GEMINI_API_KEY': JSON.stringify(
+    'import.meta.env.WAYNE_GEMINI_API_KEY': JSON.stringify(
       repoRootEnv.GEMINI_API_KEY ?? '',
     ),
-    'import.meta.env.KNIGHTFALL_ELEVENLABS_API_KEY': JSON.stringify(
+    'import.meta.env.WAYNE_ELEVENLABS_API_KEY': JSON.stringify(
       repoRootEnv.ELEVENLABS_API_KEY ?? '',
     ),
-    'import.meta.env.KNIGHTFALL_ELEVENLABS_VOICE_ID': JSON.stringify(
+    'import.meta.env.WAYNE_ELEVENLABS_VOICE_ID': JSON.stringify(
       repoRootEnv.ELEVENLABS_VOICE_ID ?? '',
+    ),
+    'import.meta.env.WAYNE_BACKBOARD_API_KEY': JSON.stringify(
+      repoRootEnv.BACKBOARD_API_KEY ?? '',
     ),
   };
   const isVitest = process.env.VITEST === 'true';

@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { aqlQuery } from '#queries/aqlQuery';
 
+import { rememberFact } from './backboard';
 import { formatMoney } from './formatMoney';
 
 type SetBudgetArgs = { category: string; month: string; amount: number };
@@ -278,7 +279,25 @@ export async function undoLastAction() {
   await send('undo');
 }
 
+/**
+ * Stores something durable the user said about themselves. Deliberately not a
+ * dumping ground for conversation history — only standing facts that should
+ * still be true next week.
+ */
+async function rememberAboutMe({ fact }: { fact: string }) {
+  const trimmed = (fact || '').trim();
+  if (!trimmed) {
+    return { changed: 'Nothing to remember.', remembered: false };
+  }
+  await rememberFact(trimmed);
+  return {
+    changed: `Remembered: ${trimmed}`,
+    remembered: true,
+  };
+}
+
 export const budgetActionTools = {
+  rememberAboutMe,
   addTransactions,
   setBudgetAmount,
   moveBudgetMoney,
@@ -291,6 +310,7 @@ export type BudgetActionName = keyof typeof budgetActionTools;
 
 /** Tools that change data — used to flag replies as undoable in the UI. */
 export const MUTATING_TOOLS = new Set<string>([
+  'rememberAboutMe',
   'addTransactions',
   'setBudgetAmount',
   'moveBudgetMoney',
@@ -299,6 +319,22 @@ export const MUTATING_TOOLS = new Set<string>([
 ]);
 
 export const budgetActionDeclarations = [
+  {
+    name: 'rememberAboutMe',
+    description:
+      'Remember a durable fact about the user so it is still known in future conversations: a savings goal, a recurring commitment, a payday, a preference about how they want help. Only call this for things that stay true beyond today, and only when the user has actually told you. Never store their transactions, balances or anything they did not say about themselves.',
+    parameters: {
+      type: 'object',
+      properties: {
+        fact: {
+          type: 'string',
+          description:
+            'One short sentence in the third person, e.g. "Is saving for a car deposit by June 2027."',
+        },
+      },
+      required: ['fact'],
+    },
+  },
   {
     name: 'addTransactions',
     description:

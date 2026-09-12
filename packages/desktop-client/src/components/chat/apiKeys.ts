@@ -14,10 +14,14 @@ import { useGlobalPref } from '#hooks/useGlobalPref';
  */
 
 const ENV_KEYS = {
-  gemini: import.meta.env.KNIGHTFALL_GEMINI_API_KEY || '',
-  elevenLabs: import.meta.env.KNIGHTFALL_ELEVENLABS_API_KEY || '',
-  elevenLabsVoice: import.meta.env.KNIGHTFALL_ELEVENLABS_VOICE_ID || '',
+  gemini: import.meta.env.WAYNE_GEMINI_API_KEY || '',
+  elevenLabs: import.meta.env.WAYNE_ELEVENLABS_API_KEY || '',
+  elevenLabsVoice: import.meta.env.WAYNE_ELEVENLABS_VOICE_ID || '',
+  backboard: import.meta.env.WAYNE_BACKBOARD_API_KEY || '',
 } as const;
+
+/** Backboard is optional: without a key the assistant simply has no memory. */
+export const BACKBOARD_API_KEY = ENV_KEYS.backboard;
 
 export type AssistantKeys = {
   geminiApiKey?: string;
@@ -45,4 +49,5 @@ export const envKeyStatus = {
   gemini: Boolean(ENV_KEYS.gemini),
   elevenLabs: Boolean(ENV_KEYS.elevenLabs),
   elevenLabsVoice: Boolean(ENV_KEYS.elevenLabsVoice),
+  backboard: Boolean(ENV_KEYS.backboard),
 };

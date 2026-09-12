@@ -3,6 +3,7 @@
 // API key (stored locally, see GlobalPrefs.geminiApiKey) — no server needed.
 import * as monthUtils from '@actual-app/core/shared/months';
 
+import { recallMemories } from './backboard';
 import {
   budgetActionDeclarations,
   budgetActionTools,
@@ -49,8 +50,12 @@ export type ChatMessage = {
 // The date has to be stated explicitly: without it the model burns tool-call
 // rounds probing date-revealing tools (upcoming bills, forecasts, balances)
 // just to work out what "last month" means, and often never converges.
-function buildSystemInstruction() {
-  return `You are a friendly, concise personal finance assistant built into the Actual Budget app.
+function buildSystemInstruction(memories: string[] = []) {
+  const remembered = memories.length
+    ? `\n\nWhat you already know about this person, from earlier conversations:\n${memories.map(m => `- ${m}`).join('\n')}\nUse these naturally where they help. Don't recite them back or announce that you remembered something unless the user asks what you know.\n`
+    : '';
+
+  return `You are a friendly, concise personal finance assistant built into the Wayne Finance app.${remembered}
 You have tools to look up the user's real transactions, budgets, account balances, upcoming bills, and cash-flow forecasts — always call a tool instead of guessing when a question needs real numbers.
 Today's date is ${monthUtils.currentDay()}. Resolve relative dates like "last month" or "this year" against it yourself; never call a tool just to discover the current date.
 
@@ -71,6 +76,8 @@ The user can attach receipts, invoices and bank statements as images or PDFs. Wh
 4. Tag it. Put a hashtag in the transaction's notes so these are easy to find later: always #receipt (or #statement for a statement), plus one short tag for the merchant or kind of spend, like "#receipt #groceries". Tags are single words with no spaces — use #eating-out, not #eating out. Keep any other useful detail in the notes too.
 
 5. Report honestly. Say what you added, to which account, and what you tagged it. If the tool tells you something was left uncategorized, say that plainly instead of claiming it was filed.
+
+When the user tells you something durable about themselves — a savings goal, a payday, a commitment, how they want to be helped — call rememberAboutMe so it survives into later conversations. Do it quietly as part of answering; don't make a ceremony of it, and never store their transactions or balances.
 
 General rules:
 - Never state a number you did not get from a tool or read off a document.
@@ -125,12 +132,18 @@ function describeGeminiFailure(status: number) {
   }
 }
 
-async function callGemini(apiKey: string, contents: GeminiContent[]) {
+async function callGemini(
+  apiKey: string,
+  contents: GeminiContent[],
+  memories: string[],
+) {
   const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: buildSystemInstruction() }] },
+      systemInstruction: {
+        parts: [{ text: buildSystemInstruction(memories) }],
+      },
       contents,
       tools: [{ functionDeclarations: allDeclarations }],
     }),
@@ -193,6 +206,12 @@ export async function sendChatMessage(
     throw new Error('Gemini API key is not set.');
   }
 
+  // What we already know about this person, pulled by relevance to what they
+  // just asked. Never fatal: no memory means a normal answer.
+  const lastUserMessage = [...history].reverse().find(m => m.role === 'user');
+  const recalled = await recallMemories(lastUserMessage?.text ?? '');
+  const memories = recalled.map(m => m.content);
+
   // Documents are only re-sent while they are still recent, measured back from
   // the end of the conversation. Without this every later message re-uploads
   // and re-bills the attachment, which a phone photo makes expensive fast;
@@ -217,7 +236,7 @@ export async function sendChatMessage(
 
   // Guard against infinite tool-call loops.
   for (let round = 0; round < 6; round++) {
-    const data = await callGemini(apiKey, contents);
+    const data = await callGemini(apiKey, contents, memories);
     const candidate = data.candidates?.[0];
     const parts: GeminiPart[] = candidate?.content?.parts ?? [];
 
