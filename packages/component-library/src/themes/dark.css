@@ -103,8 +103,8 @@
   --color-mobileHeaderText: var(--palette-gold200);
   --color-mobileHeaderTextSubdued: var(--palette-gray200);
   --color-mobileHeaderTextHover: rgba(200, 200, 200, 0.15);
-  --color-mobilePageBackground: var(--palette-navy700);
-  --color-mobileNavBackground: var(--palette-navy800);
+  --color-mobilePageBackground: var(--palette-gray900);
+  --color-mobileNavBackground: var(--palette-navy900);
   --color-mobileNavItem: var(--palette-navy150);
   --color-mobileNavItemSelected: var(--palette-gold400);
   --color-mobileAccountShadow: var(--color-cardShadow);

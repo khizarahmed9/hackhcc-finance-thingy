@@ -7,6 +7,7 @@ import { css, cx } from '@emotion/css';
 import { AnimatedLoading } from './icons/AnimatedLoading';
 import { styles } from './styles';
 import { theme } from './theme';
+import { breakpoints } from './tokens';
 import { View } from './View';
 
 const backgroundColor: {
@@ -149,6 +150,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           overflow: 'hidden',
           display: 'flex',
           borderRadius: 9,
+          // Below the small breakpoint these are touch targets, not cursor
+          // targets: 40px is the floor the design system asks for.
+          [`@media (max-width: ${breakpoints.small}px)`]: {
+            minHeight: styles.mobileMinHeight,
+          },
           backgroundColor: backgroundColor[variantWithDisabled],
           border: _getBorder(variant, variantWithDisabled),
           color: textColor[variantWithDisabled],

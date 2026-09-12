@@ -12,6 +12,7 @@ import { css, cx } from '@emotion/css';
 import { useResponsive } from './hooks/useResponsive';
 import { styles } from './styles';
 import { theme } from './theme';
+import { breakpoints } from './tokens';
 
 export const baseInputStyle = {
   outline: 0,
@@ -20,6 +21,9 @@ export const baseInputStyle = {
   margin: 0,
   padding: '7px 10px',
   borderRadius: 9,
+  [`@media (max-width: ${breakpoints.small}px)`]: {
+    minHeight: styles.mobileMinHeight,
+  },
   border: '1px solid ' + theme.formInputBorder,
 };
 

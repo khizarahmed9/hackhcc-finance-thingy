@@ -1,7 +1,8 @@
 {
-  "name": "Actual",
-  "short_name": "Actual",
-  "description": "A local-first personal finance tool",
+  "name": "Wayne Finance",
+  "short_name": "Wayne",
+  "description": "A private, local-first money manager with an AI assistant that works on your real budget.",
+  "id": "/",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -30,6 +31,18 @@
   ],
   "shortcuts": [
     {
+      "name": "Ask the assistant",
+      "short_name": "Assistant",
+      "description": "Ask about your budget, or hand it a receipt",
+      "url": "/chat",
+      "icons": [
+        {
+          "src": "/shortcut-assistant.svg",
+          "sizes": "150x150"
+        }
+      ]
+    },
+    {
       "name": "Add Transaction",
       "short_name": "Add Transaction",
       "description": "Add a new transaction",
@@ -52,38 +65,28 @@
           "sizes": "150x150"
         }
       ]
-    },
-    {
-      "name": "Reports",
-      "short_name": "Reports",
-      "description": "View reports",
-      "url": "/reports",
-      "icons": [
-        {
-          "src": "/shortcut-reports.svg",
-          "sizes": "150x150"
-        }
-      ]
     }
   ],
   "screenshots": [
     {
       "src": "/screenshot_wide.png",
       "form_factor": "wide",
-      "label": "Actual Budget Homepage",
+      "label": "Wayne Finance on desktop",
       "type": "image/png",
       "sizes": "1280x720"
     },
     {
       "src": "/screenshot_narrow.png",
       "form_factor": "narrow",
-      "label": "Actual Budget Mobile Homepage",
+      "label": "Wayne Finance on mobile",
       "type": "image/png",
       "sizes": "350x600"
     }
   ],
-  "theme_color": "#5c3dbb",
-  "background_color": "#5c3dbb",
+  "theme_color": "#102a43",
+  "background_color": "#080811",
   "display": "standalone",
-  "start_url": "./"
+  "orientation": "portrait",
+  "start_url": "/",
+  "scope": "/"
 }
