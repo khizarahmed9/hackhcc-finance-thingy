@@ -146,6 +146,9 @@ export type GlobalPrefs = Partial<{
   notifyWhenUpdateIsAvailable: boolean;
   lastSeenNewsDate: string; // YYYY-MM-DD of the newest news entry the user has seen on this device
   showNewsFeed: boolean; // Whether in-app notifications (bell, Notifications page, release toast) are shown.
+  geminiApiKey?: string; // Google Gemini API key for the AI Assistant chat
+  elevenLabsApiKey?: string; // ElevenLabs API key for voice replies in the AI Assistant chat
+  elevenLabsVoiceId?: string; // ElevenLabs voice id to use for speech synthesis
 }>;
 
 // GlobalPrefsJson represents what's saved in the global-store.json file
@@ -176,6 +179,9 @@ export type GlobalPrefsJson = Partial<{
   notifyWhenUpdateIsAvailable?: GlobalPrefs['notifyWhenUpdateIsAvailable'];
   lastSeenNewsDate?: GlobalPrefs['lastSeenNewsDate'];
   showNewsFeed?: GlobalPrefs['showNewsFeed'];
+  'gemini-api-key'?: GlobalPrefs['geminiApiKey'];
+  'elevenlabs-api-key'?: GlobalPrefs['elevenLabsApiKey'];
+  'elevenlabs-voice-id'?: GlobalPrefs['elevenLabsVoiceId'];
 }>;
 
 export type AuthMethods = 'password' | 'openid';

@@ -145,6 +145,15 @@ async function saveGlobalPrefs(prefs: GlobalPrefs) {
   if (prefs.showNewsFeed !== undefined) {
     await asyncStorage.setItem('showNewsFeed', prefs.showNewsFeed);
   }
+  if (prefs.geminiApiKey !== undefined) {
+    await asyncStorage.setItem('gemini-api-key', prefs.geminiApiKey);
+  }
+  if (prefs.elevenLabsApiKey !== undefined) {
+    await asyncStorage.setItem('elevenlabs-api-key', prefs.elevenLabsApiKey);
+  }
+  if (prefs.elevenLabsVoiceId !== undefined) {
+    await asyncStorage.setItem('elevenlabs-voice-id', prefs.elevenLabsVoiceId);
+  }
   return 'ok';
 }
 
@@ -166,6 +175,9 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
     notifyWhenUpdateIsAvailable,
     lastSeenNewsDate,
     showNewsFeed,
+    'gemini-api-key': geminiApiKey,
+    'elevenlabs-api-key': elevenLabsApiKey,
+    'elevenlabs-voice-id': elevenLabsVoiceId,
   } = await asyncStorage.multiGet([
     'floating-sidebar',
     'category-expanded-state',
@@ -183,6 +195,9 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
     'notifyWhenUpdateIsAvailable',
     'lastSeenNewsDate',
     'showNewsFeed',
+    'gemini-api-key',
+    'elevenlabs-api-key',
+    'elevenlabs-voice-id',
   ] as const);
   return {
     floatingSidebar: floatingSidebar === 'true',
@@ -213,6 +228,9 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
         : notifyWhenUpdateIsAvailable, // default to true
     lastSeenNewsDate: lastSeenNewsDate || undefined,
     showNewsFeed: showNewsFeed === undefined ? true : showNewsFeed, // default to true
+    geminiApiKey: geminiApiKey || undefined,
+    elevenLabsApiKey: elevenLabsApiKey || undefined,
+    elevenLabsVoiceId: elevenLabsVoiceId || undefined,
   };
 }
 
