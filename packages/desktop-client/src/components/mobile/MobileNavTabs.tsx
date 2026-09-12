@@ -7,15 +7,12 @@ import { animated, config, useSpring } from 'react-spring';
 import { useResponsive } from '@actual-app/components/hooks/useResponsive';
 import {
   SvgAdd,
+  SvgChatBubbleDots,
   SvgCog,
-  SvgCreditCard,
   SvgPiggyBank,
   SvgReports,
-  SvgStoreFront,
-  SvgTuning,
   SvgWallet,
 } from '@actual-app/components/icons/v1';
-import { SvgCalendar3 } from '@actual-app/components/icons/v2';
 import { styles } from '@actual-app/components/styles';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
@@ -23,7 +20,6 @@ import { useDrag } from '@use-gesture/react';
 
 import { useIsTestEnv } from '#hooks/useIsTestEnv';
 import { useScrollListener } from '#hooks/useScrollListener';
-import { useSyncServerStatus } from '#hooks/useSyncServerStatus';
 
 const COLUMN_COUNT = 3;
 const PILL_HEIGHT = 15;
@@ -38,9 +34,7 @@ export const MOBILE_NAV_HEIGHT = ROW_HEIGHT + PILL_HEIGHT;
 export function MobileNavTabs() {
   const { t } = useTranslation();
   const { isNarrowWidth } = useResponsive();
-  const syncServerStatus = useSyncServerStatus();
   const isTestEnv = useIsTestEnv();
-  const isUsingServer = syncServerStatus !== 'no-server' || isTestEnv;
   const [navbarState, setNavbarState] = useState<'default' | 'open' | 'hidden'>(
     'default',
   );
@@ -92,7 +86,16 @@ export function MobileNavTabs() {
     [api, isTestEnv],
   );
 
+  // Mirrors the desktop sidebar: the assistant leads, and the power-user
+  // management screens (Schedules, Payees, Rules, Bank Sync) are not
+  // destinations in this build.
   const navTabs = [
+    {
+      name: t('Assistant'),
+      path: '/chat',
+      style: navTabStyle,
+      Icon: SvgChatBubbleDots,
+    },
     {
       name: t('Budget'),
       path: '/budget',
@@ -100,7 +103,7 @@ export function MobileNavTabs() {
       Icon: SvgWallet,
     },
     {
-      name: t('Transaction'),
+      name: t('Add'),
       path: '/transactions/new',
       style: navTabStyle,
       Icon: SvgAdd,
@@ -117,34 +120,6 @@ export function MobileNavTabs() {
       style: navTabStyle,
       Icon: SvgReports,
     },
-    {
-      name: t('Schedules'),
-      path: '/schedules',
-      style: navTabStyle,
-      Icon: SvgCalendar3,
-    },
-    {
-      name: t('Payees'),
-      path: '/payees',
-      style: navTabStyle,
-      Icon: SvgStoreFront,
-    },
-    {
-      name: t('Rules'),
-      path: '/rules',
-      style: navTabStyle,
-      Icon: SvgTuning,
-    },
-    ...(isUsingServer
-      ? [
-          {
-            name: t('Bank Sync'),
-            path: '/bank-sync',
-            style: navTabStyle,
-            Icon: SvgCreditCard,
-          },
-        ]
-      : []),
     {
       name: t('Settings'),
       path: '/settings',

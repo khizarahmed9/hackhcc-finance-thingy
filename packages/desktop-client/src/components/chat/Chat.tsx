@@ -154,7 +154,14 @@ export function Chat() {
   if (!geminiApiKey) {
     return (
       <Page header={t('Assistant')}>
-        <View style={{ maxWidth: 440, gap: 12 }}>
+        <View
+          style={{
+            maxWidth: 440,
+            gap: 12,
+            paddingLeft: isNarrowWidth ? 16 : 0,
+            paddingRight: isNarrowWidth ? 16 : 0,
+          }}
+        >
           <Text style={{ lineHeight: 1.55 }}>
             <Trans>
               The assistant answers questions about your budget and can make

@@ -12,7 +12,6 @@ import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '@actual-app/components/button';
 import { Card } from '@actual-app/components/card';
 import { AnimatedLoading } from '@actual-app/components/icons/AnimatedLoading';
-import { SvgLogo } from '@actual-app/components/icons/logo';
 import {
   SvgArrowThinLeft,
   SvgArrowThinRight,
@@ -32,6 +31,7 @@ import { groupById } from '@actual-app/core/shared/util';
 import type { TransObjectLiteral } from '@actual-app/core/types/util';
 
 import { sync } from '#app/appSlice';
+import { BRAND } from '#brand';
 import {
   useBudgetActions,
   useCreateCategoryGroupMutation,
@@ -574,11 +574,15 @@ export function BudgetPage() {
               onPress={onOpenBudgetPageMenu}
               aria-label={t('Budget page menu')}
             >
-              <SvgLogo
-                style={{ color: theme.mobileHeaderText }}
-                width="20"
-                height="20"
-              />
+              <Text
+                style={{
+                  color: theme.mobileHeaderText,
+                  fontWeight: 600,
+                  fontSize: 15,
+                }}
+              >
+                {BRAND.name}
+              </Text>
               <SvgCheveronRight
                 style={{ flexShrink: 0, color: theme.mobileHeaderTextSubdued }}
                 width="14"
