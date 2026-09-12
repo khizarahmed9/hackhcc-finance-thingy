@@ -200,7 +200,31 @@ async function getCashFlowForecast({ months = 3 }: CashFlowForecastArgs) {
   });
 }
 
+/**
+ * The budget's real category names, grouped. The model needs this before it
+ * can file anything: without it, it guesses plausible-sounding categories that
+ * don't exist in this budget and the transaction lands uncategorized.
+ */
+async function getCategories() {
+  const { grouped } = (await send('get-categories')) as {
+    grouped: Array<{
+      name: string;
+      is_income?: boolean;
+      categories?: Array<{ name: string; hidden?: boolean }>;
+    }>;
+  };
+
+  return (grouped ?? []).map(group => ({
+    group: group.name,
+    isIncome: Boolean(group.is_income),
+    categories: (group.categories ?? [])
+      .filter(c => !c.hidden)
+      .map(c => c.name),
+  }));
+}
+
 export const budgetTools = {
+  getCategories,
   getSpendingByCategory,
   getTransactions,
   getAccountBalances,
@@ -213,6 +237,12 @@ export type BudgetToolName = keyof typeof budgetTools;
 
 // Gemini function-calling declarations for the tools above.
 export const budgetToolDeclarations = [
+  {
+    name: 'getCategories',
+    description:
+      'List every category in this budget, grouped. Call this before assigning a category to anything, so you use a category that actually exists instead of inventing one.',
+    parameters: { type: 'object', properties: {} },
+  },
   {
     name: 'getSpendingByCategory',
     description:

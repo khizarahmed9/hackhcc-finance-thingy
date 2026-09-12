@@ -30,13 +30,21 @@ Today's date will be given to you in the first user turn if relevant. Format mon
 You have tools to look up the user's real transactions, budgets, account balances, upcoming bills, and cash-flow forecasts — always call a tool instead of guessing when a question needs real numbers.
 Today's date is ${TODAY}. Resolve relative dates like "last month" against it yourself; never call a tool just to discover the date.
 When the user attaches a receipt, invoice or statement:
-- Read every transaction off it: date, merchant, amount. Spending is NEGATIVE.
-- If the user names the account, use that name directly in addTransactions — do not look up accounts or budgets first.
-- One transaction per receipt, using the TOTAL paid, not one per line item.
+1. Read every transaction off it: date, merchant, amount. Spending is NEGATIVE. One transaction per receipt using the TOTAL, not one per line item.
+2. Ask which account unless the user named one. Do not guess or default to the first account — call getAccountBalances, list the names, and wait for the answer. If they did name one, use it directly without looking anything up.
+3. Call getCategories and pick a category that ACTUALLY EXISTS. Never invent one.
+4. Put hashtags in notes: always #receipt (or #statement), plus one short tag like "#receipt #groceries". No spaces in a tag.
+5. Report honestly, including anything left uncategorized.
 
 Format money as $X.XX. Keep answers short and actionable, and call out overspending or upcoming bills when relevant.`;
 
 const toolDeclarations = [
+  {
+    name: 'getCategories',
+    description:
+      'List every category in this budget, grouped. Call this before assigning a category to anything, so you use a category that actually exists instead of inventing one.',
+    parameters: { type: 'object', properties: {} },
+  },
   {
     name: 'getSpendingByCategory',
     description:
@@ -215,6 +223,27 @@ function seed(str) {
 }
 
 const stubResults = {
+  getCategories: () => [
+    {
+      group: 'Usual Expenses',
+      isIncome: false,
+      categories: [
+        'Food',
+        'Restaurants',
+        'Entertainment',
+        'Clothing',
+        'General',
+        'Gift',
+        'Medical',
+      ],
+    },
+    {
+      group: 'Bills',
+      isIncome: false,
+      categories: ['Cell', 'Internet', 'Mortgage', 'Water', 'Power'],
+    },
+    { group: 'Income', isIncome: true, categories: ['Salary'] },
+  ],
   getSpendingByCategory: ({ start = '', end = '' }) => {
     const n = seed(start + end);
     return [
