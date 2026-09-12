@@ -4,7 +4,7 @@
 import { budgetToolDeclarations, budgetTools } from './budgetTools';
 import type { BudgetToolName } from './budgetTools';
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MODEL = 'gemini-3.6-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 export type ChatRole = 'user' | 'model';
