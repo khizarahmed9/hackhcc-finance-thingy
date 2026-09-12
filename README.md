@@ -6,6 +6,7 @@
 
 **Team:** Francisco · Khizer
 
+
 ## Getting Started
 
 Actual is a local-first personal finance tool. It is 100% free and open-source, written in NodeJS, it has a synchronization element so that all your changes can move between devices without any heavy lifting.
