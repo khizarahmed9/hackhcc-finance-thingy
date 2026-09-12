@@ -26,9 +26,18 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GE
 
 export type ChatRole = 'user' | 'model';
 
+/** A receipt, invoice or statement the user attached, already base64-encoded. */
+export type Attachment = {
+  name: string;
+  mimeType: string;
+  /** base64, without the data: URL prefix. */
+  data: string;
+};
+
 export type ChatMessage = {
   role: ChatRole;
   text: string;
+  attachments?: Attachment[];
 };
 
 // The date has to be stated explicitly: without it the model burns tool-call
@@ -45,11 +54,19 @@ You can also CHANGE the budget: set budgeted amounts, move money between categor
 - Every change can be undone by the user, so don't hedge or ask for confirmation twice.
 - After changing something, state the new state in one sentence.
 
+The user can attach receipts, invoices and bank statements as images or PDFs. When they do:
+- Read every transaction off the document: date, merchant, and amount. Spending is NEGATIVE, income positive.
+- If the document has no year, infer it from today's date.
+- If the user names the account, use that name directly in addTransactions — do not look up accounts or budgets first. Only call getAccountBalances when no account was named and you need to ask which one.
+- One transaction per receipt, using the TOTAL paid, not one per line item. Use the document's own total; don't re-add the items yourself.
+- Show the user what you found and add it with addTransactions. Never invent a transaction that isn't in the document, and never guess a total you cannot read.
+
 Format money as $X.XX. Keep answers short and actionable, and call out overspending or upcoming bills when relevant.`;
 }
 
 type GeminiPart =
   | { text: string }
+  | { inlineData: { mimeType: string; data: string } }
   | {
       functionCall: {
         id?: string;
@@ -140,7 +157,12 @@ export async function sendChatMessage(
 
   const contents: GeminiContent[] = history.map(m => ({
     role: m.role,
-    parts: [{ text: m.text }],
+    parts: [
+      ...(m.attachments ?? []).map(file => ({
+        inlineData: { mimeType: file.mimeType, data: file.data },
+      })),
+      ...(m.text ? [{ text: m.text }] : []),
+    ],
   }));
   const actions: AgentAction[] = [];
 

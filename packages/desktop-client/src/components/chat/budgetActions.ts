@@ -14,6 +14,7 @@ import {
   integerToAmount,
   integerToCurrency,
 } from '@actual-app/core/shared/util';
+import { v4 as uuidv4 } from 'uuid';
 
 import { aqlQuery } from '#queries/aqlQuery';
 
@@ -300,6 +301,7 @@ export async function undoLastAction() {
 }
 
 export const budgetActionTools = {
+  addTransactions,
   setBudgetAmount,
   moveBudgetMoney,
   getUncategorizedTransactions,
@@ -311,6 +313,7 @@ export type BudgetActionName = keyof typeof budgetActionTools;
 
 /** Tools that change data — used to flag replies as undoable in the UI. */
 export const MUTATING_TOOLS = new Set<string>([
+  'addTransactions',
   'setBudgetAmount',
   'moveBudgetMoney',
   'categorizeTransactions',
@@ -318,6 +321,39 @@ export const MUTATING_TOOLS = new Set<string>([
 ]);
 
 export const budgetActionDeclarations = [
+  {
+    name: 'addTransactions',
+    description:
+      "Add transactions read off a receipt, invoice or bank statement the user attached. Spending must be negative and income positive. Only call this after you have actually read a document the user provided \u2014 never invent transactions. This changes the user's data.",
+    parameters: {
+      type: 'object',
+      properties: {
+        account: {
+          type: 'string',
+          description: 'Name of the account these belong to',
+        },
+        transactions: {
+          type: 'array',
+          description: 'The transactions found in the document',
+          items: {
+            type: 'object',
+            properties: {
+              date: { type: 'string', description: 'Date, YYYY-MM-DD' },
+              payee: { type: 'string', description: 'Merchant or payee name' },
+              amount: {
+                type: 'number',
+                description: 'Dollar amount; negative for spending',
+              },
+              category: { type: 'string' },
+              notes: { type: 'string' },
+            },
+            required: ['date', 'payee', 'amount'],
+          },
+        },
+      },
+      required: ['account', 'transactions'],
+    },
+  },
   {
     name: 'setBudgetAmount',
     description:
@@ -393,3 +429,117 @@ export const budgetActionDeclarations = [
     },
   },
 ] as const;
+
+type ImportedTransaction = {
+  date: string;
+  payee: string;
+  amount: number;
+  category?: string;
+  notes?: string;
+};
+
+type AddTransactionsArgs = {
+  account: string;
+  transactions: ImportedTransaction[];
+};
+
+/** Resolves an account by name, the same forgiving way categories resolve. */
+async function resolveAccount(name: string) {
+  const accounts = await send('accounts-get');
+  const open = accounts.filter(a => !a.closed);
+  const target = name.trim().toLowerCase();
+
+  const exact = open.find(a => a.name.toLowerCase() === target);
+  if (exact) {
+    return exact;
+  }
+  const partial = open.filter(a => a.name.toLowerCase().includes(target));
+  if (partial.length === 1) {
+    return partial[0];
+  }
+  if (partial.length > 1) {
+    throw new Error(
+      `"${name}" matches several accounts: ${partial.map(a => a.name).join(', ')}. Ask the user which one.`,
+    );
+  }
+  throw new Error(
+    `No account named "${name}". Available accounts: ${open.map(a => a.name).join(', ')}.`,
+  );
+}
+
+/** Finds an existing payee by name, creating one only when there is no match. */
+async function resolvePayeeId(name: string) {
+  const payees = (await send('payees-get')) as Array<{
+    id: string;
+    name: string;
+  }>;
+  const target = name.trim().toLowerCase();
+  const existing = payees.find(p => p.name.toLowerCase() === target);
+  if (existing) {
+    return existing.id;
+  }
+  return send('payee-create', { name: name.trim() });
+}
+
+/**
+ * Writes transactions read off a receipt or statement into an account.
+ *
+ * Amounts follow the user's sign convention: spending is negative. The model
+ * is told to send what the document shows, so a receipt total of 24.10 arrives
+ * as -24.10 and a deposit as positive.
+ */
+async function addTransactions({ account, transactions }: AddTransactionsArgs) {
+  if (!transactions || transactions.length === 0) {
+    return { changed: 'No transactions to add.', count: 0 };
+  }
+
+  const resolvedAccount = await resolveAccount(account);
+
+  const added = [];
+  const unmatchedCategories = new Set<string>();
+  for (const txn of transactions) {
+    const payeeId = txn.payee ? await resolvePayeeId(txn.payee) : null;
+    let categoryId;
+    if (txn.category) {
+      try {
+        categoryId = (await resolveCategory(txn.category)).id;
+      } catch {
+        // An unrecognized category is not worth failing the import over — the
+        // transaction lands uncategorized. Report it back so the model doesn't
+        // tell the user it filed something under a category that isn't there.
+        unmatchedCategories.add(txn.category);
+        categoryId = undefined;
+      }
+    }
+
+    added.push({
+      id: uuidv4(),
+      account: resolvedAccount.id,
+      date: txn.date,
+      amount: amountToInteger(txn.amount),
+      payee: payeeId,
+      category: categoryId,
+      notes: txn.notes,
+      cleared: false,
+    });
+  }
+
+  await send('transactions-batch-update', { added });
+
+  const total = transactions.reduce((sum, t) => sum + t.amount, 0);
+  const uncategorized = added.filter(t => !t.category).length;
+
+  return {
+    changed:
+      `Added ${added.length} transaction${added.length === 1 ? '' : 's'} to ${resolvedAccount.name}, totalling ${await formatAmount(total)}.` +
+      (uncategorized > 0 ? ` ${uncategorized} left uncategorized.` : ''),
+    count: added.length,
+    account: resolvedAccount.name,
+    uncategorized,
+    ...(unmatchedCategories.size > 0
+      ? {
+          warning: `These categories do not exist in this budget, so those transactions were left uncategorized: ${[...unmatchedCategories].join(', ')}. Tell the user, and offer the closest existing category.`,
+        }
+      : {}),
+  };
+}

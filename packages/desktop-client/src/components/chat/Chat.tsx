@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import type { DragEvent } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { Button } from '@actual-app/components/button';
 import { useResponsive } from '@actual-app/components/hooks/useResponsive';
 import {
+  SvgAttachment,
   SvgMic,
   SvgSend,
   SvgVolumeOff,
@@ -19,8 +21,10 @@ import { Page } from '#components/Page';
 import { useGlobalPref } from '#hooks/useGlobalPref';
 
 import { ActionCard } from './ActionCard';
+import { AttachmentChips } from './AttachmentChips';
+import { ACCEPTED_TYPES, toAttachment } from './attachments';
 import { ChatBubble } from './ChatBubble';
-import type { AgentAction, ChatMessage } from './gemini';
+import type { AgentAction, Attachment, ChatMessage } from './gemini';
 import { sendChatMessage } from './gemini';
 import { InsightCard } from './InsightCard';
 import { loadInsights } from './insights';
@@ -52,7 +56,10 @@ export function Chat() {
   const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<Attachment[]>([]);
+  const [isDropping, setIsDropping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const voice = useVoice({
     apiKey: elevenLabsApiKey,
@@ -75,14 +82,22 @@ export function Chat() {
 
   async function handleSend(text: string) {
     const question = text.trim();
-    if (!question || !geminiApiKey || isLoading) return;
+    const files = pending;
+    // A document on its own is a valid message; text is only required when
+    // there is nothing attached.
+    if ((!question && files.length === 0) || !geminiApiKey || isLoading) return;
 
     const nextHistory: ChatMessage[] = [
       ...messages,
-      { role: 'user', text: question },
+      {
+        role: 'user',
+        text: question || 'Read the attached document.',
+        ...(files.length > 0 ? { attachments: files } : {}),
+      },
     ];
     setMessages(nextHistory);
     setInput('');
+    setPending([]);
     setIsLoading(true);
     setError(null);
 
@@ -106,6 +121,24 @@ export function Chat() {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function acceptFiles(list: FileList | File[] | null) {
+    if (!list || list.length === 0) {
+      return;
+    }
+    setError(null);
+    const accepted: Attachment[] = [];
+    for (const file of Array.from(list)) {
+      try {
+        accepted.push(await toAttachment(file));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    }
+    if (accepted.length > 0) {
+      setPending(prev => [...prev, ...accepted]);
     }
   }
 
@@ -145,6 +178,16 @@ export function Chat() {
   return (
     <Page header={t('Assistant')}>
       <View
+        onDragOver={(e: DragEvent) => {
+          e.preventDefault();
+          setIsDropping(true);
+        }}
+        onDragLeave={() => setIsDropping(false)}
+        onDrop={(e: DragEvent) => {
+          e.preventDefault();
+          setIsDropping(false);
+          void acceptFiles(e.dataTransfer?.files ?? null);
+        }}
         style={{
           flex: 1,
           maxWidth: 720,
@@ -152,6 +195,9 @@ export function Chat() {
           gap: 16,
           paddingLeft: isNarrowWidth ? 16 : 0,
           paddingRight: isNarrowWidth ? 16 : 0,
+          outline: isDropping ? `2px dashed ${theme.pageTextLink}` : 'none',
+          outlineOffset: 4,
+          borderRadius: 6,
         }}
       >
         <View
@@ -204,6 +250,11 @@ export function Chat() {
 
             {messages.map((message, i) => (
               <View key={i} style={{ gap: 8 }}>
+                {message.attachments && (
+                  <View style={{ alignSelf: 'flex-end' }}>
+                    <AttachmentChips attachments={message.attachments} />
+                  </View>
+                )}
                 <ChatBubble message={message} />
                 {actionsByMessage[i] && (
                   <ActionCard actions={actionsByMessage[i]} />
@@ -225,6 +276,24 @@ export function Chat() {
         )}
 
         <View style={{ gap: 6 }}>
+          <AttachmentChips
+            attachments={pending}
+            onRemove={i => setPending(prev => prev.filter((_, n) => n !== i))}
+          />
+
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept={ACCEPTED_TYPES.join(',')}
+            style={{ display: 'none' }}
+            onChange={e => {
+              void acceptFiles(e.target.files);
+              // Allow re-picking the same file after removing it.
+              e.target.value = '';
+            }}
+          />
+
           {/* The three controls plus a field don't fit on a phone without
               clipping the placeholder, so the field takes its own row there. */}
           <View
@@ -253,6 +322,13 @@ export function Chat() {
                 justifyContent: isNarrowWidth ? 'flex-end' : 'flex-start',
               }}
             >
+              <Button
+                aria-label={t('Attach a receipt or statement')}
+                isDisabled={isLoading}
+                onPress={() => fileRef.current?.click()}
+              >
+                <SvgAttachment style={{ width: 13, height: 13 }} />
+              </Button>
               <Button
                 variant={isRecording ? 'primary' : 'normal'}
                 isDisabled={!elevenLabsApiKey || voice.state === 'transcribing'}

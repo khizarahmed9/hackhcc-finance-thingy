@@ -7,6 +7,9 @@
 // Keep the request shape here in sync with
 // packages/desktop-client/src/components/chat/gemini.ts — the point is to
 // reproduce what the app sends, byte for byte.
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { loadEnv, requireKey } from './env.mjs';
 
 const env = loadEnv();
@@ -26,6 +29,11 @@ Today's date will be given to you in the first user turn if relevant. Format mon
   : `You are a friendly, concise personal finance assistant built into the Actual Budget app.
 You have tools to look up the user's real transactions, budgets, account balances, upcoming bills, and cash-flow forecasts — always call a tool instead of guessing when a question needs real numbers.
 Today's date is ${TODAY}. Resolve relative dates like "last month" against it yourself; never call a tool just to discover the date.
+When the user attaches a receipt, invoice or statement:
+- Read every transaction off it: date, merchant, amount. Spending is NEGATIVE.
+- If the user names the account, use that name directly in addTransactions — do not look up accounts or budgets first.
+- One transaction per receipt, using the TOTAL paid, not one per line item.
+
 Format money as $X.XX. Keep answers short and actionable, and call out overspending or upcoming bills when relevant.`;
 
 const toolDeclarations = [
@@ -158,6 +166,32 @@ const toolDeclarations = [
     },
   },
   {
+    name: 'addTransactions',
+    description:
+      "Add transactions read off a receipt, invoice or bank statement the user attached. Spending must be negative and income positive. Only call this after you have actually read a document the user provided — never invent transactions. This changes the user's data.",
+    parameters: {
+      type: 'object',
+      properties: {
+        account: { type: 'string' },
+        transactions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              date: { type: 'string' },
+              payee: { type: 'string' },
+              amount: { type: 'number' },
+              category: { type: 'string' },
+              notes: { type: 'string' },
+            },
+            required: ['date', 'payee', 'amount'],
+          },
+        },
+      },
+      required: ['account', 'transactions'],
+    },
+  },
+  {
     name: 'coverOverspending',
     description:
       "Cover every overspent category for a month by pulling from the unassigned To Budget pool. This changes the user's data.",
@@ -241,6 +275,10 @@ const stubResults = {
     changed: `Categorized 2 transactions as ${category}.`,
     count: 2,
   }),
+  addTransactions: ({ account, transactions = [] }) => ({
+    changed: `Added ${transactions.length} transactions to ${account}.`,
+    count: transactions.length,
+  }),
   coverOverspending: () => ({
     changed: 'Covered overspending in 1 category from To Budget.',
     count: 1,
@@ -285,11 +323,35 @@ async function callGemini(contents) {
   return JSON.parse(body);
 }
 
-async function run(prompt) {
+// --file <path> attaches a receipt/statement the way the chat UI does.
+function attachmentPart(file) {
+  const ext = path.extname(file).toLowerCase();
+  const mimeType =
+    ext === '.pdf'
+      ? 'application/pdf'
+      : ext === '.png'
+        ? 'image/png'
+        : ext === '.webp'
+          ? 'image/webp'
+          : 'image/jpeg';
+  return {
+    inlineData: { mimeType, data: readFileSync(file).toString('base64') },
+  };
+}
+
+async function run(prompt, file) {
   console.log(`model:  ${MODEL}`);
   console.log(`prompt: ${prompt}\n`);
 
-  const contents = [{ role: 'user', parts: [{ text: prompt }] }];
+  const contents = [
+    {
+      role: 'user',
+      parts: [...(file ? [attachmentPart(file)] : []), { text: prompt }],
+    },
+  ];
+  if (file) {
+    console.log(`file:   ${file}`);
+  }
 
   for (let round = 0; round < 6; round++) {
     console.log(`${'='.repeat(70)}\nROUND ${round + 1}\n${'='.repeat(70)}`);
@@ -358,6 +420,10 @@ const ECHO_ID = !args.includes('--no-echo-id');
 if (args.includes('--list-models')) {
   await listModels();
 } else {
-  const prompt = args.filter(a => !a.startsWith('--')).join(' ');
-  await run(prompt || 'How much did I spend on groceries last month?');
+  const fileFlag = args.indexOf('--file');
+  const file = fileFlag === -1 ? null : args[fileFlag + 1];
+  const prompt = args
+    .filter((a, i) => !a.startsWith('--') && i !== fileFlag + 1)
+    .join(' ');
+  await run(prompt || 'How much did I spend on groceries last month?', file);
 }
