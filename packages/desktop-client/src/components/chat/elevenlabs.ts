@@ -37,6 +37,24 @@ function toSpokenText(text: string) {
  * important for a conversation, where the user may want to cut the reply off
  * and ask something else.
  */
+function requestSpeech(apiKey: string, voiceId: string, text: string) {
+  return fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?optimize_streaming_latency=3`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        text,
+        model_id: TTS_MODEL,
+        voice_settings: { stability: 0.4, similarity_boost: 0.75 },
+      }),
+    },
+  );
+}
+
 export async function speak(
   apiKey: string,
   text: string,
@@ -47,21 +65,23 @@ export async function speak(
     return { stop: noop, done: Promise.resolve() };
   }
 
-  const res = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?optimize_streaming_latency=3`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'xi-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        text: spoken,
-        model_id: TTS_MODEL,
-        voice_settings: { stability: 0.4, similarity_boost: 0.75 },
-      }),
-    },
-  );
+  let res = await requestSpeech(apiKey, voiceId, spoken);
+
+  // A voice id that isn't on this account shouldn't silence the assistant
+  // entirely — fall back to the built-in voice and carry on.
+  if (!res.ok && voiceId !== DEFAULT_VOICE_ID) {
+    const body = await res
+      .clone()
+      .text()
+      .catch(() => '');
+    if (res.status === 400 || res.status === 404) {
+      console.warn(
+        `[AI Assistant] voice "${voiceId}" unavailable, using the default voice instead:`,
+        body,
+      );
+      res = await requestSpeech(apiKey, DEFAULT_VOICE_ID, spoken);
+    }
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
