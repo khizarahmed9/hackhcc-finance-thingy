@@ -6,17 +6,14 @@
 // `undoLastAction()` — that is what makes it safe to let the model act
 // directly instead of forcing a confirmation round-trip for every change.
 import { send } from '@actual-app/core/platform/client/connection';
-import { getCurrency } from '@actual-app/core/shared/currencies';
 import * as monthUtils from '@actual-app/core/shared/months';
 import { q } from '@actual-app/core/shared/query';
-import {
-  amountToInteger,
-  integerToAmount,
-  integerToCurrency,
-} from '@actual-app/core/shared/util';
+import { amountToInteger, integerToAmount } from '@actual-app/core/shared/util';
 import { v4 as uuidv4 } from 'uuid';
 
 import { aqlQuery } from '#queries/aqlQuery';
+
+import { formatMoney } from './formatMoney';
 
 type SetBudgetArgs = { category: string; month: string; amount: number };
 type MoveMoneyArgs = {
@@ -34,25 +31,6 @@ type CategorizeArgs = {
 };
 
 type Category = { id: string; name: string; is_income?: boolean };
-
-/**
- * Formats an amount for an action summary. `integerToCurrency` groups digits
- * but omits the symbol (matching Actual's bare sidebar figures); in a prose
- * receipt sitting next to the assistant's own "$500.00" that reads as a bug,
- * so the user's configured currency symbol goes back on.
- */
-async function formatAmount(amount: number) {
-  const grouped = integerToCurrency(amountToInteger(amount));
-  try {
-    const prefs = (await send('preferences/get')) as {
-      defaultCurrencyCode?: string;
-    };
-    const symbol = getCurrency(prefs?.defaultCurrencyCode || '')?.symbol;
-    return symbol ? `${symbol}${grouped}` : `$${grouped}`;
-  } catch {
-    return `$${grouped}`;
-  }
-}
 
 /**
  * Resolves a user- or model-supplied category name to a real category. Exact
@@ -111,7 +89,7 @@ async function setBudgetAmount({ category, month, amount }: SetBudgetArgs) {
   });
 
   return {
-    changed: `Budgeted ${await formatAmount(amount)} for ${resolved.name} in ${monthLabel(targetMonth)}.`,
+    changed: `Budgeted ${await formatMoney(amount)} for ${resolved.name} in ${monthLabel(targetMonth)}.`,
     category: resolved.name,
     month: targetMonth,
     amount,
@@ -138,7 +116,7 @@ async function moveBudgetMoney({ from, to, month, amount }: MoveMoneyArgs) {
   const fromName = fromCategory ? fromCategory.name : 'To Budget';
   const toName = toCategory ? toCategory.name : 'To Budget';
   return {
-    changed: `Moved ${await formatAmount(amount)} from ${fromName} to ${toName} in ${monthLabel(targetMonth)}.`,
+    changed: `Moved ${await formatMoney(amount)} from ${fromName} to ${toName} in ${monthLabel(targetMonth)}.`,
     from: fromName,
     to: toName,
     month: targetMonth,
@@ -531,7 +509,7 @@ async function addTransactions({ account, transactions }: AddTransactionsArgs) {
 
   return {
     changed:
-      `Added ${added.length} transaction${added.length === 1 ? '' : 's'} to ${resolvedAccount.name}, totalling ${await formatAmount(total)}.` +
+      `Added ${added.length} transaction${added.length === 1 ? '' : 's'} to ${resolvedAccount.name}, totalling ${await formatMoney(total)}.` +
       (uncategorized > 0 ? ` ${uncategorized} left uncategorized.` : ''),
     count: added.length,
     account: resolvedAccount.name,
