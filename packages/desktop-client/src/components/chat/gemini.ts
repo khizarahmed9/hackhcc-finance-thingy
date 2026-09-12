@@ -28,8 +28,10 @@ type GeminiPart =
       };
     };
 
+// The API no longer accepts a 'function' role — function responses go back
+// as a 'user' turn, same as a plain user message would.
 type GeminiContent = {
-  role: 'user' | 'model' | 'function';
+  role: 'user' | 'model';
   parts: GeminiPart[];
 };
 
@@ -113,7 +115,7 @@ export async function sendChatMessage(
         },
       });
     }
-    contents.push({ role: 'function', parts: responseParts });
+    contents.push({ role: 'user', parts: responseParts });
   }
 
   return "Sorry, I couldn't finish looking that up. Try asking again.";
