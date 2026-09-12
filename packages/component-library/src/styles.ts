@@ -8,15 +8,17 @@ export type CSSProperties = Record<string, any>;
 
 const MOBILE_MIN_HEIGHT = 40;
 
+// Layered shadows: a hairline contact shadow plus a wide soft ambient one.
+// The old single mid-opacity drop read as 2014-era Material.
 const shadowLarge = {
-  boxShadow: '0 15px 30px 0 rgba(0,0,0,0.11), 0 5px 15px 0 rgba(0,0,0,0.08)',
+  boxShadow: '0 1px 2px rgba(0,0,0,0.06), 0 12px 32px -8px rgba(0,0,0,0.18)',
 };
 
 export const styles: CSSProperties = {
   incomeHeaderHeight: 70,
-  cardShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+  cardShadow: '0 1px 2px rgba(0,0,0,0.04), 0 8px 24px -12px rgba(0,0,0,0.12)',
   monthRightPadding: 5,
-  menuBorderRadius: 4,
+  menuBorderRadius: 10,
   mobileMinHeight: MOBILE_MIN_HEIGHT,
   mobileMenuItem: {
     fontSize: 17,
@@ -35,14 +37,17 @@ export const styles: CSSProperties = {
     fontSize: 13,
     fontWeight: 700,
   },
+  // Display sizes carry negative tracking; wide letter-spacing on bold
+  // headings is the clearest dated tell in the old scale.
   veryLargeText: {
     fontSize: 30,
     fontWeight: 600,
+    letterSpacing: '-0.02em',
   },
   largeText: {
     fontSize: 20,
-    fontWeight: 700,
-    letterSpacing: 0.5,
+    fontWeight: 600,
+    letterSpacing: '-0.01em',
   },
   mediumText: {
     fontSize: 15,

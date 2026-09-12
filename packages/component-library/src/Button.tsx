@@ -90,9 +90,9 @@ const _getBorder = (
 const _getPadding = (variant: ButtonVariant): string => {
   switch (variant) {
     case 'bare':
-      return '5px';
+      return '6px';
     default:
-      return '5px 10px';
+      return '7px 14px';
   }
 };
 
@@ -148,11 +148,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           margin: 0,
           overflow: 'hidden',
           display: 'flex',
-          borderRadius: 4,
+          borderRadius: 9,
           backgroundColor: backgroundColor[variantWithDisabled],
           border: _getBorder(variant, variantWithDisabled),
           color: textColor[variantWithDisabled],
-          transition: 'box-shadow .25s',
+          transition:
+            'box-shadow .18s ease-out, background-color .18s ease-out',
           WebkitAppRegion: 'no-drag',
           ...styles.smallText,
           '&[data-hovered]': _getHoveredStyles(variant),

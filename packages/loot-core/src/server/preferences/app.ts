@@ -206,13 +206,14 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
     documentDir: documentDir || getDefaultDocumentDir(),
     keyId: encryptKey && JSON.parse(encryptKey).id,
     language,
+    // Dark is this build's default look rather than following the OS.
     theme:
       theme === 'light' ||
       theme === 'dark' ||
       theme === 'auto' ||
       theme === 'midnight'
         ? theme
-        : 'auto',
+        : 'dark',
     preferredDarkTheme:
       preferredDarkTheme === 'dark' || preferredDarkTheme === 'midnight'
         ? preferredDarkTheme

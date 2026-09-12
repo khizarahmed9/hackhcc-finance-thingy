@@ -8,7 +8,7 @@
   --color-pageBackgroundLineBottom: var(--palette-navy150);
   --color-pageText: var(--palette-navy150);
   --color-pageTextLight: var(--palette-navy300);
-  --color-pageTextSubdued: var(--palette-navy500);
+  --color-pageTextSubdued: var(--palette-navy300);
   --color-pageTextDark: var(--palette-navy100);
   --color-pageTextPositive: var(--palette-purple200);
   --color-pageTextLink: var(--palette-purple400);
@@ -24,10 +24,10 @@
   --color-tableText: var(--palette-navy150);
   --color-tableTextItemAdded: var(--color-tableText);
   --color-tableTextLight: var(--color-tableText);
-  --color-tableTextSubdued: var(--palette-navy500);
+  --color-tableTextSubdued: var(--palette-navy300);
   --color-tableTextSelected: var(--palette-navy150);
   --color-tableTextHover: var(--palette-navy400);
-  --color-tableTextInactive: var(--palette-navy500);
+  --color-tableTextInactive: var(--palette-navy300);
   --color-tableHeaderText: var(--palette-navy300);
   --color-tableHeaderBackground: var(--palette-navy700);
   --color-tableBorder: var(--palette-navy600);
@@ -41,7 +41,7 @@
 
   --color-numberPositive: var(--palette-green300);
   --color-numberNegative: var(--palette-red200);
-  --color-numberNeutral: var(--palette-navy500);
+  --color-numberNeutral: var(--palette-navy300);
   --color-budgetNumberNegative: var(--color-numberNegative);
   --color-budgetNumberZero: var(--color-tableTextSubdued);
   --color-budgetNumberNeutral: var(--color-tableText);
@@ -69,7 +69,7 @@
   --color-sidebarBudgetName: var(--palette-navy300);
   --color-sidebarHeaderText: var(--palette-white);
   --color-sidebarTextSubdued: var(--palette-navy300);
-  --color-sidebarTextMuted: var(--palette-navy500);
+  --color-sidebarTextMuted: var(--palette-navy400);
   --color-sidebarTextPositive: var(--color-sidebarItemBackgroundPositive);
   --color-sidebarTextFailed: var(--color-sidebarItemBackgroundFailed);
   --color-sidebarBackgroundFailedSubtle: color-mix(
@@ -225,7 +225,7 @@
   --color-pillBackgroundSelected: var(--palette-purple600);
   --color-pillTextSelected: var(--palette-navy150);
   --color-pillBorderSelected: var(--palette-purple400);
-  --color-pillTextSubdued: var(--palette-navy500);
+  --color-pillTextSubdued: var(--palette-navy400);
 
   --color-reportsRed: var(--palette-red300);
   --color-reportsBlue: var(--palette-blue400);
