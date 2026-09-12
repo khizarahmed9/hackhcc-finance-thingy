@@ -18,9 +18,9 @@ import { View } from '@actual-app/components/view';
 
 import { Link } from '#components/common/Link';
 import { Page } from '#components/Page';
-import { useGlobalPref } from '#hooks/useGlobalPref';
 
 import { ActionCard } from './ActionCard';
+import { useAssistantKeys } from './apiKeys';
 import { AttachmentChips } from './AttachmentChips';
 import { ACCEPTED_TYPES, toAttachment } from './attachments';
 import { ChatBubble } from './ChatBubble';
@@ -42,9 +42,8 @@ const SUGGESTIONS = [
 
 export function Chat() {
   const { t } = useTranslation();
-  const [geminiApiKey] = useGlobalPref('geminiApiKey');
-  const [elevenLabsApiKey] = useGlobalPref('elevenLabsApiKey');
-  const [elevenLabsVoiceId] = useGlobalPref('elevenLabsVoiceId');
+  const { geminiApiKey, elevenLabsApiKey, elevenLabsVoiceId } =
+    useAssistantKeys();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   // Keyed by the index of the model message the actions belong to.

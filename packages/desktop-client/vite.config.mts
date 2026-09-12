@@ -238,6 +238,23 @@ const pluginsServiceAssets = (): Plugin => ({
 
 export default defineConfig(async ({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '');
+
+  // API keys for the AI Assistant live in .env.local at the repo root, so one
+  // file serves both the app and the scripts in scripts/ai-debug. These are
+  // inlined into the bundle at build time: anything defined here is readable
+  // by anyone who opens devtools on a deployed build.
+  const repoRootEnv = loadEnv(mode, path.resolve(__dirname, '../..'), '');
+  const assistantKeys = {
+    'import.meta.env.KNIGHTFALL_GEMINI_API_KEY': JSON.stringify(
+      repoRootEnv.GEMINI_API_KEY ?? '',
+    ),
+    'import.meta.env.KNIGHTFALL_ELEVENLABS_API_KEY': JSON.stringify(
+      repoRootEnv.ELEVENLABS_API_KEY ?? '',
+    ),
+    'import.meta.env.KNIGHTFALL_ELEVENLABS_VOICE_ID': JSON.stringify(
+      repoRootEnv.ELEVENLABS_VOICE_ID ?? '',
+    ),
+  };
   const isVitest = process.env.VITEST === 'true';
   const devHeaders = {
     'Cross-Origin-Opener-Policy': 'same-origin',
@@ -281,6 +298,7 @@ export default defineConfig(async ({ mode, command }) => {
   return {
     base: '/',
     envPrefix: 'REACT_APP_',
+    define: assistantKeys,
     build: {
       minify: 'oxc',
       target: 'es2022',
