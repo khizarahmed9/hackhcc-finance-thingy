@@ -43,11 +43,6 @@ async function callGemini(apiKey: string, contents: GeminiContent[]) {
       systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
       contents,
       tools: [{ functionDeclarations: budgetToolDeclarations }],
-      // Thinking models can loop on tool calls without ever emitting a final
-      // text turn if the thought-signature bookkeeping isn't echoed back
-      // perfectly. Disabling thinking keeps this a plain, fast call/respond
-      // loop, which is all this assistant needs.
-      generationConfig: { thinkingConfig: { thinkingBudget: 0 } },
     }),
   });
 
