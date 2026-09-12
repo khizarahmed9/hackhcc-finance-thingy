@@ -149,6 +149,7 @@ export type GlobalPrefs = Partial<{
   geminiApiKey?: string; // Google Gemini API key for the AI Assistant chat
   elevenLabsApiKey?: string; // ElevenLabs API key for voice replies in the AI Assistant chat
   elevenLabsVoiceId?: string; // ElevenLabs voice id to use for speech synthesis
+  assistantBackground?: string; // Free-text context about the user, given to the AI Assistant on every message
 }>;
 
 // GlobalPrefsJson represents what's saved in the global-store.json file
@@ -182,6 +183,7 @@ export type GlobalPrefsJson = Partial<{
   'gemini-api-key'?: GlobalPrefs['geminiApiKey'];
   'elevenlabs-api-key'?: GlobalPrefs['elevenLabsApiKey'];
   'elevenlabs-voice-id'?: GlobalPrefs['elevenLabsVoiceId'];
+  'assistant-background'?: GlobalPrefs['assistantBackground'];
 }>;
 
 export type AuthMethods = 'password' | 'openid';

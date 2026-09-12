@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { Input } from '@actual-app/components/input';
 import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
+import { css } from '@emotion/css';
 
 import { envKeyStatus } from '#components/chat/apiKeys';
 import { Link } from '#components/common/Link';
@@ -32,6 +33,11 @@ export function AIAssistantSettings() {
     useGlobalPref('elevenLabsApiKey');
   const [elevenLabsVoiceId, setElevenLabsVoiceId] =
     useGlobalPref('elevenLabsVoiceId');
+  const [assistantBackground, setAssistantBackground] = useGlobalPref(
+    'assistantBackground',
+  );
+  // Local copy so typing stays responsive; the pref is written on blur.
+  const [backgroundDraft, setBackgroundDraft] = useState<string | null>(null);
 
   return (
     <Setting>
@@ -109,6 +115,46 @@ export function AIAssistantSettings() {
           />
           {envKeyStatus.elevenLabsVoice && <SuppliedNote />}
         </FormField>
+      </View>
+
+      <View style={{ gap: 6, maxWidth: 520, marginTop: 4 }}>
+        <FormLabel
+          title={t('About you (optional)')}
+          htmlFor="assistant-background"
+        />
+        <Text style={{ fontSize: 12, color: theme.pageTextSubdued }}>
+          <Trans>
+            Anything the assistant should know before it answers — who you are,
+            what you are saving for, how you like to be helped. It is sent with
+            every message and stays on this device.
+          </Trans>
+        </Text>
+        <textarea
+          id="assistant-background"
+          className={css({
+            border: '1px solid ' + theme.buttonNormalBorder,
+            borderRadius: 9,
+            padding: '8px 10px',
+            minHeight: 110,
+            resize: 'vertical',
+            outline: 'none',
+            backgroundColor: theme.tableBackground,
+            color: theme.tableText,
+            fontFamily: 'inherit',
+            fontSize: 14,
+            lineHeight: 1.5,
+            ':focus': { borderColor: theme.formInputBorderSelected },
+          })}
+          value={backgroundDraft ?? assistantBackground ?? ''}
+          placeholder={t(
+            'I am a student in Houston, saving for a car deposit by June 2027. Payday is the 15th. Keep advice short and practical.',
+          )}
+          onChange={e => setBackgroundDraft(e.target.value)}
+          onBlur={e => {
+            setAssistantBackground(e.target.value || undefined);
+            setBackgroundDraft(null);
+          }}
+        />
       </View>
     </Setting>
   );

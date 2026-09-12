@@ -154,6 +154,12 @@ async function saveGlobalPrefs(prefs: GlobalPrefs) {
   if (prefs.elevenLabsVoiceId !== undefined) {
     await asyncStorage.setItem('elevenlabs-voice-id', prefs.elevenLabsVoiceId);
   }
+  if (prefs.assistantBackground !== undefined) {
+    await asyncStorage.setItem(
+      'assistant-background',
+      prefs.assistantBackground,
+    );
+  }
   return 'ok';
 }
 
@@ -178,6 +184,7 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
     'gemini-api-key': geminiApiKey,
     'elevenlabs-api-key': elevenLabsApiKey,
     'elevenlabs-voice-id': elevenLabsVoiceId,
+    'assistant-background': assistantBackground,
   } = await asyncStorage.multiGet([
     'floating-sidebar',
     'category-expanded-state',
@@ -198,6 +205,7 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
     'gemini-api-key',
     'elevenlabs-api-key',
     'elevenlabs-voice-id',
+    'assistant-background',
   ] as const);
   return {
     floatingSidebar: floatingSidebar === 'true',
@@ -232,6 +240,7 @@ async function loadGlobalPrefs(): Promise<GlobalPrefs> {
     geminiApiKey: geminiApiKey || undefined,
     elevenLabsApiKey: elevenLabsApiKey || undefined,
     elevenLabsVoiceId: elevenLabsVoiceId || undefined,
+    assistantBackground: assistantBackground || undefined,
   };
 }
 

@@ -50,12 +50,15 @@ export type ChatMessage = {
 // The date has to be stated explicitly: without it the model burns tool-call
 // rounds probing date-revealing tools (upcoming bills, forecasts, balances)
 // just to work out what "last month" means, and often never converges.
-function buildSystemInstruction(memories: string[] = []) {
+function buildSystemInstruction(memories: string[] = [], background = '') {
+  const about = background.trim()
+    ? `\n\nWhat this person told you about themselves:\n${background.trim()}\n`
+    : '';
   const remembered = memories.length
     ? `\n\nWhat you already know about this person, from earlier conversations:\n${memories.map(m => `- ${m}`).join('\n')}\nUse these naturally where they help. Don't recite them back or announce that you remembered something unless the user asks what you know.\n`
     : '';
 
-  return `You are a friendly, concise personal finance assistant built into the Wayne Finance app.${remembered}
+  return `You are a friendly, concise personal finance assistant built into the Wayne Finance app.${about}${remembered}
 You have tools to look up the user's real transactions, budgets, account balances, upcoming bills, and cash-flow forecasts — always call a tool instead of guessing when a question needs real numbers.
 Today's date is ${monthUtils.currentDay()}. Resolve relative dates like "last month" or "this year" against it yourself; never call a tool just to discover the current date.
 
@@ -77,7 +80,7 @@ The user can attach receipts, invoices and bank statements as images or PDFs. Wh
 
 5. Report honestly. Say what you added, to which account, and what you tagged it. If the tool tells you something was left uncategorized, say that plainly instead of claiming it was filed.
 
-When the user tells you something durable about themselves — a savings goal, a payday, a commitment, how they want to be helped — call rememberAboutMe so it survives into later conversations. Do it quietly as part of answering; don't make a ceremony of it, and never store their transactions or balances.
+When the user TELLS you something about themselves rather than asking a question — a savings goal, a payday, a commitment, a preference — that is not a request to analyse anything. Call rememberAboutMe for each durable fact, acknowledge it in one short sentence, and stop. Do not look up transactions, budgets or forecasts unless they actually asked. Never store their transactions or balances, only what they said about themselves.
 
 General rules:
 - Never state a number you did not get from a tool or read off a document.
@@ -136,13 +139,14 @@ async function callGemini(
   apiKey: string,
   contents: GeminiContent[],
   memories: string[],
+  background: string,
 ) {
   const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: {
-        parts: [{ text: buildSystemInstruction(memories) }],
+        parts: [{ text: buildSystemInstruction(memories, background) }],
       },
       contents,
       tools: [{ functionDeclarations: allDeclarations }],
@@ -201,6 +205,7 @@ export type ChatReply = {
 export async function sendChatMessage(
   apiKey: string,
   history: ChatMessage[],
+  background = '',
 ): Promise<ChatReply> {
   if (!apiKey) {
     throw new Error('Gemini API key is not set.');
@@ -236,7 +241,7 @@ export async function sendChatMessage(
 
   // Guard against infinite tool-call loops.
   for (let round = 0; round < 6; round++) {
-    const data = await callGemini(apiKey, contents, memories);
+    const data = await callGemini(apiKey, contents, memories, background);
     const candidate = data.candidates?.[0];
     const parts: GeminiPart[] = candidate?.content?.parts ?? [];
 

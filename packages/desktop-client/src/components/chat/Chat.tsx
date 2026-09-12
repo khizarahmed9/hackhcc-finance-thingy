@@ -18,6 +18,7 @@ import { View } from '@actual-app/components/view';
 
 import { Link } from '#components/common/Link';
 import { Page } from '#components/Page';
+import { useGlobalPref } from '#hooks/useGlobalPref';
 
 import { ActionCard } from './ActionCard';
 import { useAssistantKeys } from './apiKeys';
@@ -44,6 +45,7 @@ export function Chat() {
   const { t } = useTranslation();
   const { geminiApiKey, elevenLabsApiKey, elevenLabsVoiceId } =
     useAssistantKeys();
+  const [assistantBackground] = useGlobalPref('assistantBackground');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   // Keyed by the index of the model message the actions belong to.
@@ -122,6 +124,7 @@ export function Chat() {
       const reply = await sendChatMessage(
         geminiApiKeyValue as string,
         nextHistoryFinal,
+        assistantBackground ?? '',
       );
       setMessages([...nextHistoryFinal, { role: 'model', text: reply.text }]);
 
