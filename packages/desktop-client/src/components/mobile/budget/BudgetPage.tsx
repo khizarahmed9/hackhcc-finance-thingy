@@ -581,7 +581,7 @@ export function BudgetPage() {
                   fontSize: 15,
                 }}
               >
-                {BRAND.name}
+                {BRAND.short}
               </Text>
               <SvgCheveronRight
                 style={{ flexShrink: 0, color: theme.mobileHeaderTextSubdued }}

@@ -72,6 +72,22 @@
   --palette-red800: #8a041a;
   --palette-red900: #610316;
 
+  /* Wayne gold — the accent ramp for the dark theme. Warm amber reads as
+     metal against a near-black ground, where the purple ramp reads as
+     software chrome. */
+  --palette-gold50: #fdf8ed;
+  --palette-gold100: #faf0d7;
+  --palette-gold125: #f5e4b8;
+  --palette-gold150: #f0d999;
+  --palette-gold200: #edc96f;
+  --palette-gold300: #e0b143;
+  --palette-gold400: #cd9a29;
+  --palette-gold500: #b8851d;
+  --palette-gold600: #9a6d15;
+  --palette-gold700: #7b5610;
+  --palette-gold800: #5c400c;
+  --palette-gold900: #3c2a08;
+
   --palette-purple50: #f9f6fe;
   --palette-purple100: #f2ebfe;
   --palette-purple125: #e4d4ff;

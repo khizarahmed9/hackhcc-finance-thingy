@@ -3,7 +3,9 @@
  * consistently and can be changed without hunting through components.
  */
 export const BRAND = {
-  name: 'Knightfall',
-  tagline: 'Your money, defended.',
+  name: 'Wayne Finance',
+  /** For tight spots like the mobile header, where the full name collides. */
+  short: 'Wayne',
+  tagline: 'Your money, under watch.',
   domain: 'knightfall.wiki',
 } as const;

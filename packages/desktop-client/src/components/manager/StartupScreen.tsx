@@ -12,22 +12,22 @@ export function StartupScreen() {
   return (
     <View style={{ alignItems: 'center', gap: 10 }}>
       <style>
-        {`@keyframes knightfall-pulse {
+        {`@keyframes wayne-pulse {
             0%, 100% { opacity: 0.45; }
             50% { opacity: 1; }
           }
           @media (prefers-reduced-motion: reduce) {
-            .knightfall-mark { animation: none !important; opacity: 0.8; }
+            .wayne-mark { animation: none !important; opacity: 0.8; }
           }`}
       </style>
       <Text
-        className="knightfall-mark"
+        className="wayne-mark"
         style={{
           fontSize: 30,
           fontWeight: 600,
           letterSpacing: '-0.02em',
           color: theme.pageText,
-          animation: 'knightfall-pulse 1.6s ease-in-out infinite',
+          animation: 'wayne-pulse 1.6s ease-in-out infinite',
         }}
       >
         {BRAND.name}
