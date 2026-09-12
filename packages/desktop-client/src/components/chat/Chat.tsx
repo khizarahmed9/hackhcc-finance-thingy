@@ -11,9 +11,10 @@ import { Link } from '#components/common/Link';
 import { Page } from '#components/Page';
 import { useGlobalPref } from '#hooks/useGlobalPref';
 
+import { ActionCard } from './ActionCard';
 import { ChatBubble } from './ChatBubble';
 import { speak } from './elevenlabs';
-import type { ChatMessage } from './gemini';
+import type { AgentAction, ChatMessage } from './gemini';
 import { sendChatMessage } from './gemini';
 import { InsightCard } from './InsightCard';
 import { loadInsights } from './insights';
@@ -21,8 +22,8 @@ import { loadInsights } from './insights';
 const SUGGESTIONS = [
   'How much did I spend this month?',
   'What bills are coming up?',
-  'Am I on track with my budget?',
-  "What's my net worth?",
+  'Cover my overspending this month',
+  'Categorize my uncategorized transactions',
 ];
 
 export function Chat() {
@@ -32,6 +33,10 @@ export function Chat() {
   const [elevenLabsVoiceId] = useGlobalPref('elevenLabsVoiceId');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Keyed by the index of the model message the actions belong to.
+  const [actionsByMessage, setActionsByMessage] = useState<
+    Record<number, AgentAction[]>
+  >({});
   const [insights, setInsights] = useState<string[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -64,10 +69,21 @@ export function Chat() {
 
     try {
       const reply = await sendChatMessage(geminiApiKey, nextHistory);
-      setMessages([...nextHistory, { role: 'model', text: reply }]);
+      setMessages([...nextHistory, { role: 'model', text: reply.text }]);
 
-      if (elevenLabsApiKey && !isMuted && reply) {
-        void speak(elevenLabsApiKey, reply, elevenLabsVoiceId || undefined);
+      if (reply.actions.length > 0) {
+        setActionsByMessage(prev => ({
+          ...prev,
+          [nextHistory.length]: reply.actions,
+        }));
+      }
+
+      if (elevenLabsApiKey && !isMuted && reply.text) {
+        void speak(
+          elevenLabsApiKey,
+          reply.text,
+          elevenLabsVoiceId || undefined,
+        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -124,7 +140,12 @@ export function Chat() {
           }}
         >
           {messages.map((message, i) => (
-            <ChatBubble key={i} message={message} />
+            <View key={i} style={{ gap: 6 }}>
+              <ChatBubble message={message} />
+              {actionsByMessage[i] && (
+                <ActionCard actions={actionsByMessage[i]} />
+              )}
+            </View>
           ))}
           {isLoading && (
             <ChatBubble message={{ role: 'model', text: t('Thinking…') }} />

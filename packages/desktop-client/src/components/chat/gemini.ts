@@ -1,8 +1,25 @@
 // Client-side Gemini function-calling orchestration for the AI Assistant.
 // Calls the Gemini REST API directly from the browser using a user-supplied
 // API key (stored locally, see GlobalPrefs.geminiApiKey) — no server needed.
+import * as monthUtils from '@actual-app/core/shared/months';
+
+import {
+  budgetActionDeclarations,
+  budgetActionTools,
+  MUTATING_TOOLS,
+} from './budgetActions';
 import { budgetToolDeclarations, budgetTools } from './budgetTools';
-import type { BudgetToolName } from './budgetTools';
+
+// Reads and writes are declared together so the model picks freely between
+// answering a question and acting on it.
+const allTools: Record<string, (args: never) => Promise<unknown>> = {
+  ...budgetTools,
+  ...budgetActionTools,
+};
+const allDeclarations = [
+  ...budgetToolDeclarations,
+  ...budgetActionDeclarations,
+];
 
 const GEMINI_MODEL = 'gemini-3.6-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
@@ -14,15 +31,35 @@ export type ChatMessage = {
   text: string;
 };
 
-const SYSTEM_INSTRUCTION = `You are a friendly, concise personal finance assistant built into the Actual Budget app.
+// The date has to be stated explicitly: without it the model burns tool-call
+// rounds probing date-revealing tools (upcoming bills, forecasts, balances)
+// just to work out what "last month" means, and often never converges.
+function buildSystemInstruction() {
+  return `You are a friendly, concise personal finance assistant built into the Actual Budget app.
 You have tools to look up the user's real transactions, budgets, account balances, upcoming bills, and cash-flow forecasts — always call a tool instead of guessing when a question needs real numbers.
-Today's date will be given to you in the first user turn if relevant. Format money as $X.XX. Keep answers short and actionable, and call out overspending or upcoming bills when relevant.`;
+Today's date is ${monthUtils.currentDay()}. Resolve relative dates like "last month" or "this year" against it yourself; never call a tool just to discover the current date.
+
+You can also CHANGE the budget: set budgeted amounts, move money between categories, categorize transactions, and cover overspending. Rules for acting:
+- Act when the user clearly asks you to ("budget $300 for groceries", "move $50 from dining to gas", "categorize my Kroger transactions"). Do it, then say plainly what you changed.
+- Do not make changes the user did not ask for. If a request is ambiguous about amount, category, or month, ask one short question first.
+- Every change can be undone by the user, so don't hedge or ask for confirmation twice.
+- After changing something, state the new state in one sentence.
+
+Format money as $X.XX. Keep answers short and actionable, and call out overspending or upcoming bills when relevant.`;
+}
 
 type GeminiPart =
   | { text: string }
-  | { functionCall: { name: string; args: Record<string, unknown> } }
+  | {
+      functionCall: {
+        id?: string;
+        name: string;
+        args: Record<string, unknown>;
+      };
+    }
   | {
       functionResponse: {
+        id?: string;
         name: string;
         response: { result: unknown } | { error: string };
       };
@@ -40,9 +77,9 @@ async function callGemini(apiKey: string, contents: GeminiContent[]) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+      systemInstruction: { parts: [{ text: buildSystemInstruction() }] },
       contents,
-      tools: [{ functionDeclarations: budgetToolDeclarations }],
+      tools: [{ functionDeclarations: allDeclarations }],
     }),
   });
 
@@ -61,7 +98,7 @@ async function callGemini(apiKey: string, contents: GeminiContent[]) {
 }
 
 async function runTool(name: string, args: Record<string, unknown>) {
-  const tool = budgetTools[name as BudgetToolName];
+  const tool = allTools[name];
   if (!tool) {
     return { error: `Unknown tool: ${name}` };
   }
@@ -70,18 +107,33 @@ async function runTool(name: string, args: Record<string, unknown>) {
     const result = await (tool as (args: any) => Promise<unknown>)(args);
     return { result };
   } catch (err) {
+    // Surfaced back to the model, not thrown: a bad category name or date is
+    // something it can correct on the next turn.
     return { error: err instanceof Error ? err.message : String(err) };
   }
 }
 
+/** A data-changing tool call the agent made while answering. */
+export type AgentAction = {
+  tool: string;
+  summary: string;
+};
+
+export type ChatReply = {
+  text: string;
+  /** Populated when the agent changed data, so the UI can offer an undo. */
+  actions: AgentAction[];
+};
+
 /**
  * Sends the conversation to Gemini, executing any tool calls it requests
- * against real budget data, and returns the final text reply.
+ * against real budget data, and returns the final text reply along with any
+ * changes the agent made.
  */
 export async function sendChatMessage(
   apiKey: string,
   history: ChatMessage[],
-): Promise<string> {
+): Promise<ChatReply> {
   if (!apiKey) {
     throw new Error('Gemini API key is not set.');
   }
@@ -90,6 +142,7 @@ export async function sendChatMessage(
     role: m.role,
     parts: [{ text: m.text }],
   }));
+  const actions: AgentAction[] = [];
 
   // Guard against infinite tool-call loops.
   for (let round = 0; round < 6; round++) {
@@ -103,10 +156,13 @@ export async function sendChatMessage(
     );
 
     if (functionCalls.length === 0) {
-      return parts
-        .map(p => ('text' in p ? p.text : ''))
-        .join('')
-        .trim();
+      return {
+        text: parts
+          .map(p => ('text' in p ? p.text : ''))
+          .join('')
+          .trim(),
+        actions,
+      };
     }
 
     contents.push({ role: 'model', parts });
@@ -121,8 +177,19 @@ export async function sendChatMessage(
         '->',
         outcome,
       );
+
+      if (MUTATING_TOOLS.has(functionCall.name) && 'result' in outcome) {
+        const changed = (outcome.result as { changed?: string })?.changed;
+        if (changed) {
+          actions.push({ tool: functionCall.name, summary: changed });
+        }
+      }
+
       responseParts.push({
         functionResponse: {
+          // Gemini tags each call with an id when it issues several at once;
+          // echo it back so results are matched to the right call.
+          ...(functionCall.id ? { id: functionCall.id } : {}),
           name: functionCall.name,
           response: outcome,
         },
@@ -135,5 +202,8 @@ export async function sendChatMessage(
     '[AI Assistant] gave up after too many tool-call rounds',
     contents,
   );
-  return 'That took too many steps to look up — try a narrower question (e.g. a specific month or category).';
+  return {
+    text: 'That took too many steps to look up — try a narrower question (e.g. a specific month or category).',
+    actions,
+  };
 }

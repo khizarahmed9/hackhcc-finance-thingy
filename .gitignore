@@ -77,6 +77,14 @@ DESIGN.json
 .cursor/agents/impeccable-*.md
 .github/agents/impeccable-*.agent.md
 
+# Local API keys for agent-driven testing (see .env.local.example)
+.env.local
+.env.*.local
+
+# Hackathon reference material, not part of the project
+hackathoninfo.md
+mlh-tracks.md
+
 # Misc
 .#*
 
