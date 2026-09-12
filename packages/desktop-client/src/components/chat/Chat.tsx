@@ -13,11 +13,11 @@ import { useGlobalPref } from '#hooks/useGlobalPref';
 
 import { ActionCard } from './ActionCard';
 import { ChatBubble } from './ChatBubble';
-import { speak } from './elevenlabs';
 import type { AgentAction, ChatMessage } from './gemini';
 import { sendChatMessage } from './gemini';
 import { InsightCard } from './InsightCard';
 import { loadInsights } from './insights';
+import { useVoice } from './useVoice';
 
 const SUGGESTIONS = [
   'How much did I spend this month?',
@@ -43,6 +43,15 @@ export function Chat() {
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const voice = useVoice({
+    apiKey: elevenLabsApiKey,
+    voiceId: elevenLabsVoiceId,
+    // handleSend is a hoisted declaration, so it is defined by the time the
+    // user actually finishes speaking.
+    onTranscript: text => void handleSend(text),
+    onError: setError,
+  });
 
   useEffect(() => {
     if (geminiApiKey) {
@@ -78,12 +87,8 @@ export function Chat() {
         }));
       }
 
-      if (elevenLabsApiKey && !isMuted && reply.text) {
-        void speak(
-          elevenLabsApiKey,
-          reply.text,
-          elevenLabsVoiceId || undefined,
-        );
+      if (!isMuted) {
+        void voice.say(reply.text);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -91,6 +96,13 @@ export function Chat() {
       setIsLoading(false);
     }
   }
+
+  const voiceStatus = {
+    idle: null,
+    recording: t("Listening… press Stop when you're done."),
+    transcribing: t('Transcribing…'),
+    speaking: t('Speaking… press the mic to interrupt.'),
+  }[voice.state];
 
   if (!geminiApiKey) {
     return (
@@ -179,10 +191,30 @@ export function Chat() {
           >
             <Trans>Send</Trans>
           </Button>
-          <Button onPress={() => setIsMuted(m => !m)}>
+          <Button
+            variant={voice.state === 'recording' ? 'primary' : 'normal'}
+            isDisabled={!elevenLabsApiKey || voice.state === 'transcribing'}
+            onPress={voice.toggleListening}
+          >
+            {voice.state === 'recording' ? t('Stop') : t('🎙️')}
+          </Button>
+          <Button
+            onPress={() => {
+              if (!isMuted) {
+                voice.stopSpeaking();
+              }
+              setIsMuted(m => !m);
+            }}
+          >
             {isMuted ? t('🔇') : t('🔊')}
           </Button>
         </View>
+
+        {voiceStatus && (
+          <Text style={{ color: theme.pageTextSubdued, fontSize: 12 }}>
+            {voiceStatus}
+          </Text>
+        )}
       </View>
     </Page>
   );

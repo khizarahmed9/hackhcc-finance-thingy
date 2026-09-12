@@ -51,11 +51,35 @@ async function speak(text) {
   console.log(`voice ${VOICE_ID} ok — wrote ${out}`);
 }
 
+// Round-trips the exact pair the assistant uses: Turbo v2.5 out, Scribe back in.
+async function roundTrip(text) {
+  await speak(text);
+  const audio = fs.readFileSync('/tmp/elevenlabs-probe.mp3');
+  const form = new FormData();
+  form.append('file', new Blob([audio], { type: 'audio/mpeg' }), 'probe.mp3');
+  form.append('model_id', 'scribe_v1');
+
+  const res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+    method: 'POST',
+    headers: { 'xi-api-key': API_KEY },
+    body: form,
+  });
+
+  if (!res.ok) {
+    console.error(`STT failed (${res.status}):\n${await res.text()}`);
+    process.exit(1);
+  }
+
+  const { text: heard } = await res.json();
+  console.log(`\nspoke: ${text}\nheard: ${heard}`);
+}
+
 const args = process.argv.slice(2);
+const prompt = args.filter(a => !a.startsWith('--')).join(' ');
 if (args.includes('--list-voices')) {
   await listVoices();
+} else if (args.includes('--round-trip')) {
+  await roundTrip(prompt || 'You overspent on groceries by twelve dollars.');
 } else {
-  await speak(
-    args.join(' ') || 'Your grocery budget is over by twelve dollars.',
-  );
+  await speak(prompt || 'Your grocery budget is over by twelve dollars.');
 }
