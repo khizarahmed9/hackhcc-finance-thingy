@@ -43,6 +43,11 @@ async function callGemini(apiKey: string, contents: GeminiContent[]) {
       systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
       contents,
       tools: [{ functionDeclarations: budgetToolDeclarations }],
+      // Thinking models can loop on tool calls without ever emitting a final
+      // text turn if the thought-signature bookkeeping isn't echoed back
+      // perfectly. Disabling thinking keeps this a plain, fast call/respond
+      // loop, which is all this assistant needs.
+      generationConfig: { thinkingConfig: { thinkingBudget: 0 } },
     }),
   });
 
@@ -51,7 +56,13 @@ async function callGemini(apiKey: string, contents: GeminiContent[]) {
     throw new Error(`Gemini request failed (${res.status}): ${body}`);
   }
 
-  return res.json();
+  const data = await res.json();
+  if (data.promptFeedback?.blockReason) {
+    throw new Error(
+      `Gemini blocked the request: ${data.promptFeedback.blockReason}`,
+    );
+  }
+  return data;
 }
 
 async function runTool(name: string, args: Record<string, unknown>) {
@@ -108,6 +119,13 @@ export async function sendChatMessage(
     const responseParts: GeminiPart[] = [];
     for (const { functionCall } of functionCalls) {
       const outcome = await runTool(functionCall.name, functionCall.args || {});
+      console.log(
+        '[AI Assistant] tool call',
+        functionCall.name,
+        functionCall.args,
+        '->',
+        outcome,
+      );
       responseParts.push({
         functionResponse: {
           name: functionCall.name,
@@ -118,5 +136,9 @@ export async function sendChatMessage(
     contents.push({ role: 'user', parts: responseParts });
   }
 
-  return "Sorry, I couldn't finish looking that up. Try asking again.";
+  console.warn(
+    '[AI Assistant] gave up after too many tool-call rounds',
+    contents,
+  );
+  return 'That took too many steps to look up — try a narrower question (e.g. a specific month or category).';
 }
