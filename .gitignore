@@ -74,6 +74,7 @@ bundle.mobile.js.map
 .impeccable/config.local.json
 DESIGN.json
 **/skills/impeccable/
+.claude/agents/impeccable-*.md
 .cursor/agents/impeccable-*.md
 .github/agents/impeccable-*.agent.md
 
@@ -84,6 +85,9 @@ DESIGN.json
 # Hackathon reference material, not part of the project
 hackathoninfo.md
 mlh-tracks.md
+
+# Scratch scripts kept alongside a package so Yarn PnP can resolve them
+*.tmp.mjs
 
 # Misc
 .#*

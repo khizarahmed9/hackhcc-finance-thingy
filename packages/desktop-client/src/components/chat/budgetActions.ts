@@ -6,9 +6,14 @@
 // `undoLastAction()` — that is what makes it safe to let the model act
 // directly instead of forcing a confirmation round-trip for every change.
 import { send } from '@actual-app/core/platform/client/connection';
+import { getCurrency } from '@actual-app/core/shared/currencies';
 import * as monthUtils from '@actual-app/core/shared/months';
 import { q } from '@actual-app/core/shared/query';
-import { amountToInteger, integerToAmount } from '@actual-app/core/shared/util';
+import {
+  amountToInteger,
+  integerToAmount,
+  integerToCurrency,
+} from '@actual-app/core/shared/util';
 
 import { aqlQuery } from '#queries/aqlQuery';
 
@@ -28,6 +33,25 @@ type CategorizeArgs = {
 };
 
 type Category = { id: string; name: string; is_income?: boolean };
+
+/**
+ * Formats an amount for an action summary. `integerToCurrency` groups digits
+ * but omits the symbol (matching Actual's bare sidebar figures); in a prose
+ * receipt sitting next to the assistant's own "$500.00" that reads as a bug,
+ * so the user's configured currency symbol goes back on.
+ */
+async function formatAmount(amount: number) {
+  const grouped = integerToCurrency(amountToInteger(amount));
+  try {
+    const prefs = (await send('preferences/get')) as {
+      defaultCurrencyCode?: string;
+    };
+    const symbol = getCurrency(prefs?.defaultCurrencyCode || '')?.symbol;
+    return symbol ? `${symbol}${grouped}` : `$${grouped}`;
+  } catch {
+    return `$${grouped}`;
+  }
+}
 
 /**
  * Resolves a user- or model-supplied category name to a real category. Exact
@@ -66,6 +90,15 @@ function normalizeMonth(month: string) {
   return month.length > 7 ? month.slice(0, 7) : month;
 }
 
+/** "2026-09" reads as machine output in a receipt; say "September 2026". */
+function monthLabel(month: string) {
+  try {
+    return monthUtils.format(month, 'MMMM yyyy');
+  } catch {
+    return month;
+  }
+}
+
 async function setBudgetAmount({ category, month, amount }: SetBudgetArgs) {
   const resolved = await resolveCategory(category);
   const targetMonth = normalizeMonth(month);
@@ -77,7 +110,7 @@ async function setBudgetAmount({ category, month, amount }: SetBudgetArgs) {
   });
 
   return {
-    changed: `Budgeted $${amount.toFixed(2)} for ${resolved.name} in ${targetMonth}.`,
+    changed: `Budgeted ${await formatAmount(amount)} for ${resolved.name} in ${monthLabel(targetMonth)}.`,
     category: resolved.name,
     month: targetMonth,
     amount,
@@ -104,7 +137,7 @@ async function moveBudgetMoney({ from, to, month, amount }: MoveMoneyArgs) {
   const fromName = fromCategory ? fromCategory.name : 'To Budget';
   const toName = toCategory ? toCategory.name : 'To Budget';
   return {
-    changed: `Moved $${amount.toFixed(2)} from ${fromName} to ${toName} in ${targetMonth}.`,
+    changed: `Moved ${await formatAmount(amount)} from ${fromName} to ${toName} in ${monthLabel(targetMonth)}.`,
     from: fromName,
     to: toName,
     month: targetMonth,
@@ -252,7 +285,7 @@ async function coverOverspending({ month }: { month?: string } = {}) {
   }
 
   return {
-    changed: `Covered overspending in ${overspent.length} categor${overspent.length === 1 ? 'y' : 'ies'} from To Budget.`,
+    changed: `Covered overspending in ${overspent.length} categor${overspent.length === 1 ? 'y' : 'ies'} for ${monthLabel(targetMonth)} from To Budget.`,
     count: overspent.length,
     total: overspent.reduce(
       (sum, r) => sum + Math.abs(integerToAmount(r.remaining)),

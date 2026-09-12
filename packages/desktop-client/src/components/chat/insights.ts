@@ -1,6 +1,15 @@
 import * as monthUtils from '@actual-app/core/shared/months';
+import {
+  amountToInteger,
+  integerToCurrency,
+} from '@actual-app/core/shared/util';
 
 import { budgetTools } from './budgetTools';
+
+/** Formats through the user's own number/currency preferences, not toFixed. */
+function currency(amount: number) {
+  return integerToCurrency(amountToInteger(amount));
+}
 
 /** Proactive "here's what's going on" summaries shown before the user asks anything. */
 export async function loadInsights(): Promise<string[]> {
@@ -15,7 +24,7 @@ export async function loadInsights(): Promise<string[]> {
     if (spending.length > 0) {
       const top = spending[0];
       insights.push(
-        `Your biggest spending category this month so far is ${top.category} at $${top.spent.toFixed(2)}.`,
+        `Your biggest spending category this month so far is ${top.category} at ${currency(top.spent)}.`,
       );
     }
   } catch {

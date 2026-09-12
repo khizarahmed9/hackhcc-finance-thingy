@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { Button } from '@actual-app/components/button';
+import { useResponsive } from '@actual-app/components/hooks/useResponsive';
+import {
+  SvgMic,
+  SvgSend,
+  SvgVolumeOff,
+  SvgVolumeUp,
+} from '@actual-app/components/icons/v1';
 import { Input } from '@actual-app/components/input';
 import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
@@ -17,8 +24,11 @@ import type { AgentAction, ChatMessage } from './gemini';
 import { sendChatMessage } from './gemini';
 import { InsightCard } from './InsightCard';
 import { loadInsights } from './insights';
+import { ThinkingIndicator } from './ThinkingIndicator';
 import { useVoice } from './useVoice';
 
+// Two questions and two actions, so the empty state teaches that this
+// assistant can change the budget and not only describe it.
 const SUGGESTIONS = [
   'How much did I spend this month?',
   'What bills are coming up?',
@@ -61,7 +71,7 @@ export function Chat() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages]);
+  }, [messages, isLoading]);
 
   async function handleSend(text: string) {
     const question = text.trim();
@@ -85,6 +95,8 @@ export function Chat() {
           ...prev,
           [nextHistory.length]: reply.actions,
         }));
+        // The budget changed underneath the insights shown on this page.
+        void loadInsights().then(setInsights);
       }
 
       if (!isMuted) {
@@ -97,124 +109,201 @@ export function Chat() {
     }
   }
 
+  const { isNarrowWidth } = useResponsive();
+  const isRecording = voice.state === 'recording';
   const voiceStatus = {
     idle: null,
-    recording: t("Listening… press Stop when you're done."),
+    recording: t("Listening — press the mic again when you're done"),
     transcribing: t('Transcribing…'),
-    speaking: t('Speaking… press the mic to interrupt.'),
+    speaking: t('Speaking — press the mic to interrupt'),
   }[voice.state];
 
   if (!geminiApiKey) {
     return (
       <Page header={t('Assistant')}>
-        <View style={{ maxWidth: 480, gap: 10 }}>
-          <Text>
+        <View style={{ maxWidth: 440, gap: 12 }}>
+          <Text style={{ lineHeight: 1.55 }}>
             <Trans>
-              Add a Google Gemini API key in Settings to start chatting with
-              your AI financial assistant.
+              The assistant answers questions about your budget and can make
+              changes for you. It needs a Google Gemini API key to run, and
+              calls the API straight from this device — your financial data is
+              never sent to a server of ours.
             </Trans>
           </Text>
-          <Link variant="internal" to="/settings">
-            <Trans>Go to Settings</Trans>
-          </Link>
+          <View style={{ flexDirection: 'row' }}>
+            <Link variant="internal" to="/settings">
+              <Trans>Add an API key in Settings</Trans>
+            </Link>
+          </View>
         </View>
       </Page>
     );
   }
+
+  const isEmpty = messages.length === 0;
 
   return (
     <Page header={t('Assistant')}>
       <View
         style={{
           flex: 1,
-          maxWidth: 700,
+          maxWidth: 720,
           width: '100%',
-          gap: 12,
+          gap: 16,
+          paddingLeft: isNarrowWidth ? 16 : 0,
+          paddingRight: isNarrowWidth ? 16 : 0,
         }}
       >
-        {insights.length > 0 && messages.length === 0 && (
-          <View>
-            {insights.map((insight, i) => (
-              <InsightCard key={i}>{insight}</InsightCard>
-            ))}
-          </View>
-        )}
-
         <View
           innerRef={scrollRef}
           style={{
             flex: 1,
-            minHeight: 300,
-            maxHeight: 480,
+            minHeight: 0,
             overflowY: 'auto',
-            gap: 8,
-            padding: 4,
+            paddingRight: 4,
           }}
         >
-          {messages.map((message, i) => (
-            <View key={i} style={{ gap: 6 }}>
-              <ChatBubble message={message} />
-              {actionsByMessage[i] && (
-                <ActionCard actions={actionsByMessage[i]} />
-              )}
-            </View>
-          ))}
-          {isLoading && (
-            <ChatBubble message={{ role: 'model', text: t('Thinking…') }} />
-          )}
-        </View>
+          {/* Anchors the conversation to the composer, so a short exchange
+              doesn't leave a page-height gap above the input. */}
+          <View style={{ marginTop: 'auto', gap: 16 }}>
+            {isEmpty && (
+              <View style={{ gap: 16, paddingTop: 4 }}>
+                {insights.length > 0 && (
+                  <View style={{ gap: 8 }}>
+                    {insights.map((insight, i) => (
+                      <InsightCard key={i}>{insight}</InsightCard>
+                    ))}
+                  </View>
+                )}
 
-        {error && <Text style={{ color: theme.errorText }}>{error}</Text>}
+                <View style={{ gap: 8 }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: theme.pageTextSubdued,
+                    }}
+                  >
+                    <Trans>Try asking</Trans>
+                  </Text>
+                  <View
+                    style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
+                  >
+                    {SUGGESTIONS.map(suggestion => (
+                      <Button
+                        key={suggestion}
+                        isDisabled={isLoading}
+                        onPress={() => handleSend(suggestion)}
+                      >
+                        {suggestion}
+                      </Button>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
 
-        {messages.length === 0 && (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            {SUGGESTIONS.map(suggestion => (
-              <Button key={suggestion} onPress={() => handleSend(suggestion)}>
-                {suggestion}
-              </Button>
+            {messages.map((message, i) => (
+              <View key={i} style={{ gap: 8 }}>
+                <ChatBubble message={message} />
+                {actionsByMessage[i] && (
+                  <ActionCard actions={actionsByMessage[i]} />
+                )}
+              </View>
             ))}
-          </View>
-        )}
 
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-          <Input
-            value={input}
-            placeholder={t('Ask about your spending, budget, or bills…')}
-            style={{ flex: 1 }}
-            onChangeValue={setInput}
-            onEnter={value => void handleSend(value)}
-          />
-          <Button
-            variant="primary"
-            isDisabled={isLoading || !input.trim()}
-            onPress={() => handleSend(input)}
-          >
-            <Trans>Send</Trans>
-          </Button>
-          <Button
-            variant={voice.state === 'recording' ? 'primary' : 'normal'}
-            isDisabled={!elevenLabsApiKey || voice.state === 'transcribing'}
-            onPress={voice.toggleListening}
-          >
-            {voice.state === 'recording' ? t('Stop') : t('🎙️')}
-          </Button>
-          <Button
-            onPress={() => {
-              if (!isMuted) {
-                voice.stopSpeaking();
-              }
-              setIsMuted(m => !m);
-            }}
-          >
-            {isMuted ? t('🔇') : t('🔊')}
-          </Button>
+            {isLoading && <ThinkingIndicator />}
+          </View>
         </View>
 
-        {voiceStatus && (
-          <Text style={{ color: theme.pageTextSubdued, fontSize: 12 }}>
-            {voiceStatus}
+        {error && (
+          <Text
+            role="alert"
+            style={{ color: theme.errorText, fontSize: 13, lineHeight: 1.5 }}
+          >
+            {error}
           </Text>
         )}
+
+        <View style={{ gap: 6 }}>
+          {/* The three controls plus a field don't fit on a phone without
+              clipping the placeholder, so the field takes its own row there. */}
+          <View
+            style={{
+              flexDirection: isNarrowWidth ? 'column' : 'row',
+              gap: 8,
+              alignItems: isNarrowWidth ? 'stretch' : 'center',
+            }}
+          >
+            <Input
+              value={input}
+              placeholder={
+                isNarrowWidth
+                  ? t('Ask or change something…')
+                  : t('Ask a question, or tell it what to change…')
+              }
+              style={{ flex: 1 }}
+              onChangeValue={setInput}
+              onEnter={value => void handleSend(value)}
+            />
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: 8,
+                alignItems: 'center',
+                justifyContent: isNarrowWidth ? 'flex-end' : 'flex-start',
+              }}
+            >
+              <Button
+                variant={isRecording ? 'primary' : 'normal'}
+                isDisabled={!elevenLabsApiKey || voice.state === 'transcribing'}
+                aria-label={isRecording ? t('Stop recording') : t('Speak')}
+                aria-pressed={isRecording}
+                onPress={voice.toggleListening}
+              >
+                <SvgMic style={{ width: 13, height: 13 }} />
+              </Button>
+              <Button
+                aria-label={
+                  isMuted
+                    ? t('Turn on spoken replies')
+                    : t('Mute spoken replies')
+                }
+                aria-pressed={isMuted}
+                onPress={() => {
+                  if (!isMuted) {
+                    voice.stopSpeaking();
+                  }
+                  setIsMuted(m => !m);
+                }}
+              >
+                {isMuted ? (
+                  <SvgVolumeOff style={{ width: 13, height: 13 }} />
+                ) : (
+                  <SvgVolumeUp style={{ width: 13, height: 13 }} />
+                )}
+              </Button>
+              <Button
+                variant="primary"
+                isDisabled={isLoading || !input.trim()}
+                aria-label={t('Send')}
+                onPress={() => handleSend(input)}
+              >
+                <SvgSend style={{ width: 13, height: 13 }} />
+              </Button>
+            </View>
+          </View>
+
+          <Text
+            aria-live="polite"
+            style={{
+              fontSize: 12,
+              color: theme.pageTextSubdued,
+              minHeight: 16,
+            }}
+          >
+            {voiceStatus}
+          </Text>
+        </View>
       </View>
     </Page>
   );
