@@ -22,6 +22,12 @@ const allDeclarations = [
 ];
 
 const GEMINI_MODEL = 'gemini-3.6-flash';
+
+/**
+ * How many trailing messages still carry their documents in full. A turn is a
+ * user message plus a reply, so this is roughly the last two exchanges.
+ */
+const ATTACHMENT_CONTEXT_MESSAGES = 4;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 export type ChatRole = 'user' | 'model';
@@ -99,6 +105,26 @@ type GeminiContent = {
   parts: GeminiPart[];
 };
 
+/** Turns an HTTP status into something worth showing a person. */
+function describeGeminiFailure(status: number) {
+  switch (status) {
+    case 400:
+      return 'Gemini rejected that request. If you attached a file, try a smaller one or a different format.';
+    case 401:
+    case 403:
+      return 'That Gemini API key was rejected. Check the key in Settings.';
+    case 429:
+      return 'Gemini is rate limiting this key. Wait a few seconds and try again.';
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      return 'Gemini is temporarily unavailable. Try again in a moment.';
+    default:
+      return `Gemini could not answer right now (error ${status}). Try again.`;
+  }
+}
+
 async function callGemini(apiKey: string, contents: GeminiContent[]) {
   const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
@@ -112,7 +138,9 @@ async function callGemini(apiKey: string, contents: GeminiContent[]) {
 
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    throw new Error(`Gemini request failed (${res.status}): ${body}`);
+    // The raw API body is developer output; say what the user can do instead.
+    console.error('[AI Assistant] Gemini request failed', res.status, body);
+    throw new Error(describeGeminiFailure(res.status));
   }
 
   const data = await res.json();
@@ -165,12 +193,23 @@ export async function sendChatMessage(
     throw new Error('Gemini API key is not set.');
   }
 
-  const contents: GeminiContent[] = history.map(m => ({
+  // Documents are only re-sent while they are still recent, measured back from
+  // the end of the conversation. Without this every later message re-uploads
+  // and re-bills the attachment, which a phone photo makes expensive fast;
+  // older ones become a text note so the model still knows they existed.
+  const keepFilesFrom = Math.max(
+    0,
+    history.length - ATTACHMENT_CONTEXT_MESSAGES,
+  );
+
+  const contents: GeminiContent[] = history.map((m, i) => ({
     role: m.role,
     parts: [
-      ...(m.attachments ?? []).map(file => ({
-        inlineData: { mimeType: file.mimeType, data: file.data },
-      })),
+      ...(m.attachments ?? []).map(file =>
+        i >= keepFilesFrom
+          ? { inlineData: { mimeType: file.mimeType, data: file.data } }
+          : { text: `[${file.name} — attached earlier and already read]` },
+      ),
       ...(m.text ? [{ text: m.text }] : []),
     ],
   }));

@@ -56,6 +56,8 @@ export function Chat() {
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Attachment[]>([]);
+  // Kept so a failed turn can be retried without retyping or re-attaching.
+  const [retryable, setRetryable] = useState<ChatMessage | null>(null);
   const [isDropping, setIsDropping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -86,28 +88,47 @@ export function Chat() {
     // there is nothing attached.
     if ((!question && files.length === 0) || !geminiApiKey || isLoading) return;
 
-    const nextHistory: ChatMessage[] = [
-      ...messages,
-      {
-        role: 'user',
-        text: question || 'Read the attached document.',
-        ...(files.length > 0 ? { attachments: files } : {}),
-      },
-    ];
-    setMessages(nextHistory);
+    const turn: ChatMessage = {
+      role: 'user',
+      text: question || 'Read the attached document.',
+      ...(files.length > 0 ? { attachments: files } : {}),
+    };
+    await send([...messages, turn], turn);
+  }
+
+  /** Retries the last turn that failed, reusing its text and attachments. */
+  async function handleRetry() {
+    if (!retryable || isLoading) return;
+    await send([...messages], retryable);
+  }
+
+  async function send(nextHistory: ChatMessage[], turn: ChatMessage) {
+    // On a retry the turn is already the last entry; on a fresh send it isn't.
+    const withTurn =
+      nextHistory[nextHistory.length - 1] === turn
+        ? nextHistory
+        : [...nextHistory, turn];
+
+    setMessages(withTurn);
     setInput('');
     setPending([]);
     setIsLoading(true);
     setError(null);
+    setRetryable(null);
 
+    const geminiApiKeyValue = geminiApiKey;
+    const nextHistoryFinal = withTurn;
     try {
-      const reply = await sendChatMessage(geminiApiKey, nextHistory);
-      setMessages([...nextHistory, { role: 'model', text: reply.text }]);
+      const reply = await sendChatMessage(
+        geminiApiKeyValue as string,
+        nextHistoryFinal,
+      );
+      setMessages([...nextHistoryFinal, { role: 'model', text: reply.text }]);
 
       if (reply.actions.length > 0) {
         setActionsByMessage(prev => ({
           ...prev,
-          [nextHistory.length]: reply.actions,
+          [nextHistoryFinal.length]: reply.actions,
         }));
         // The budget changed underneath the insights shown on this page.
         void loadInsights().then(setInsights);
@@ -118,9 +139,21 @@ export function Chat() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      setRetryable(turn);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  function handleNewConversation() {
+    voice.stopSpeaking();
+    setMessages([]);
+    setActionsByMessage({});
+    setPending([]);
+    setRetryable(null);
+    setError(null);
+    setInput('');
+    void loadInsights().then(setInsights);
   }
 
   async function acceptFiles(list: FileList | File[] | null) {
@@ -269,16 +302,38 @@ export function Chat() {
             ))}
 
             {isLoading && <ThinkingIndicator />}
+
+            {messages.length > 0 && !isLoading && (
+              <View style={{ flexDirection: 'row', paddingTop: 4 }}>
+                <Button variant="bare" onPress={handleNewConversation}>
+                  <Trans>New conversation</Trans>
+                </Button>
+              </View>
+            )}
           </View>
         </View>
 
         {error && (
-          <Text
+          <View
             role="alert"
-            style={{ color: theme.errorText, fontSize: 13, lineHeight: 1.5 }}
+            style={{
+              flexDirection: 'row',
+              gap: 10,
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
           >
-            {error}
-          </Text>
+            <Text
+              style={{ color: theme.errorText, fontSize: 13, lineHeight: 1.5 }}
+            >
+              {error}
+            </Text>
+            {retryable && (
+              <Button isDisabled={isLoading} onPress={handleRetry}>
+                <Trans>Try again</Trans>
+              </Button>
+            )}
+          </View>
         )}
 
         <View style={{ gap: 6 }}>
@@ -317,7 +372,12 @@ export function Chat() {
                   : t('Ask a question, or tell it what to change…')
               }
               style={{ flex: 1 }}
-              onChangeValue={setInput}
+              onChangeValue={value => {
+                setInput(value);
+                if (error) {
+                  setError(null);
+                }
+              }}
               onEnter={value => void handleSend(value)}
             />
             <View
