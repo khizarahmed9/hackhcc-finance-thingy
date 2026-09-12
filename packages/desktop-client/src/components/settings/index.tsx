@@ -2,21 +2,18 @@ import React, { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
-import { Button } from '@actual-app/components/button';
 import { useResponsive } from '@actual-app/components/hooks/useResponsive';
-import { Input } from '@actual-app/components/input';
 import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
 import { tokens } from '@actual-app/components/tokens';
 import { View } from '@actual-app/components/view';
 import { listen } from '@actual-app/core/platform/client/connection';
-import { isElectron } from '@actual-app/core/shared/environment';
 import { css } from '@emotion/css';
 
 import { getLatestAppVersion } from '#app/appSlice';
-import { closeBudget } from '#budgetfiles/budgetfilesSlice';
+import { BRAND } from '#brand';
 import { Link } from '#components/common/Link';
-import { Checkbox, FormField, FormLabel } from '#components/forms';
+import { Checkbox } from '#components/forms';
 import { MOBILE_NAV_HEIGHT } from '#components/mobile/MobileNavTabs';
 import { Page } from '#components/Page';
 import { useServerVersion } from '#components/ServerContext';
@@ -27,17 +24,14 @@ import { loadPrefs, saveSyncedPrefs } from '#prefs/prefsSlice';
 import { useDispatch, useSelector } from '#redux';
 
 import { AIAssistantSettings } from './AIAssistant';
-import { AuthSettings } from './AuthSettings';
-import { Backups } from './Backups';
 import { BudgetTypeSettings } from './BudgetTypeSettings';
 import { CurrencySettings } from './Currency';
-import { EncryptionSettings } from './Encryption';
 import { ExperimentalFeatures } from './Experimental';
 import { ExportBudget } from './Export';
 import { FormatSettings } from './Format';
 import { LanguageSettings } from './LanguageSettings';
 import { RepairTransactions } from './RepairTransactions';
-import { ResetCache, ResetSync } from './Reset';
+import { ResetCache } from './Reset';
 import { ThemeSettings } from './Themes';
 import { AdvancedToggle, Setting } from './UI';
 
@@ -55,9 +49,10 @@ function About() {
   return (
     <Setting>
       <Text>
+        <strong>{BRAND.name}</strong>{' '}
         <Trans>
-          <strong>Actual</strong> is a super fast privacy-focused app for
-          managing your finances.
+          is a private, local-first money manager with an AI assistant that
+          works on your real budget. Nothing leaves this device.
         </Trans>
       </Text>
       <View
@@ -161,10 +156,10 @@ function AdvancedAbout() {
     <Setting>
       <Text>
         <Trans>
-          <strong>IDs</strong> are the names Actual uses to identify your budget
-          internally. There are several different IDs associated with your
-          budget. The Budget ID is used to identify your budget file. The Sync
-          ID is used to access the budget on the server.
+          <strong>IDs</strong> are the names this app uses to identify your
+          budget internally. There are several different IDs associated with
+          your budget. The Budget ID is used to identify your budget file. The
+          Sync ID is used to access the budget on the server.
         </Trans>
       </Text>
       <Text>
@@ -191,13 +186,8 @@ function AdvancedAbout() {
 export function Settings() {
   const { t } = useTranslation();
   const [floatingSidebar] = useGlobalPref('floatingSidebar');
-  const [budgetName] = useMetadataPref('budgetName');
   const dispatch = useDispatch();
   const isCurrencyExperimentalEnabled = useFeatureFlag('currency');
-
-  const onCloseBudget = () => {
-    void dispatch(closeBudget());
-  };
 
   useEffect(() => {
     const unlisten = listen('prefs-updated', () => {
@@ -234,44 +224,19 @@ export function Settings() {
           paddingBottom: MOBILE_NAV_HEIGHT,
         }}
       >
-        {isNarrowWidth && (
-          <View
-            style={{
-              gap: 10,
-              flexDirection: 'row',
-              alignItems: 'flex-end',
-              width: '100%',
-            }}
-          >
-            {/* The only spot to close a budget on mobile */}
-            <FormField style={{ flex: 1 }}>
-              <FormLabel title={t('Budget name')} />
-              <Input
-                value={budgetName}
-                disabled
-                style={{ color: theme.buttonNormalDisabledText }}
-              />
-            </FormField>
-            <Button onPress={onCloseBudget} style={{ flexShrink: 0 }}>
-              <Trans>Switch file</Trans>
-            </Button>
-          </View>
-        )}
+        {/* Sync, encryption and multi-file settings are omitted: this build
+            is single-device and has no server to talk to. */}
         <About />
         <AIAssistantSettings />
         <ThemeSettings />
         <FormatSettings />
         {isCurrencyExperimentalEnabled && <CurrencySettings />}
         <LanguageSettings />
-        <AuthSettings />
-        <EncryptionSettings />
         <BudgetTypeSettings />
-        {isElectron() && <Backups />}
         <ExportBudget />
         <AdvancedToggle>
           <AdvancedAbout />
           <ResetCache />
-          <ResetSync />
           <RepairTransactions />
           <ExperimentalFeatures />
         </AdvancedToggle>

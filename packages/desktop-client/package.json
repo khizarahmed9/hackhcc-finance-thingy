@@ -27,6 +27,7 @@
     "#tags": "./src/tags/index.ts",
     "#transactions": "./src/transactions/index.ts",
     "#undo": "./src/undo/index.ts",
+    "#brand": "./src/brand.ts",
     "#global-events": "./src/global-events.ts",
     "#enablebanking": "./src/enablebanking.ts",
     "#gocardless": "./src/gocardless.ts",

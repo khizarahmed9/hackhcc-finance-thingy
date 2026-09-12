@@ -44,7 +44,6 @@ import { FloatableSidebar } from './sidebar';
 import { ManageTagsPage } from './tags/ManageTagsPage';
 import { Titlebar } from './Titlebar';
 import { Tour } from './tour/Tour';
-import { TourAutoOffer } from './tour/TourAutoOffer';
 import { TourProvider } from './tour/TourProvider';
 
 function NarrowNotSupported({
@@ -205,7 +204,6 @@ export function FinancesApp() {
         <GlobalKeys />
         <CommandBar />
         <ContextMenu />
-        <TourAutoOffer />
         <Tour />
         <View
           style={{
