@@ -223,7 +223,75 @@ async function getCategories() {
   }));
 }
 
+/**
+ * Income, spending and what's left over, month by month.
+ *
+ * Answering "how long until I can afford X" previously meant two lookups per
+ * month — spending by category plus income transactions — which exhausted the
+ * tool budget before the model could answer. This returns the whole picture in
+ * one call.
+ */
+async function getMonthlySummary({ months = 6 }: { months?: number } = {}) {
+  const end = monthUtils.currentDay();
+  const startMonth = monthUtils.subMonths(
+    monthUtils.currentMonth(),
+    months - 1,
+  );
+  const start = monthUtils.firstDayOfMonth(startMonth);
+
+  const { data } = await aqlQuery(
+    q('transactions')
+      .filter({
+        $and: [{ date: { $gte: start } }, { date: { $lte: end } }],
+        'account.offbudget': false,
+        // Moving money between your own accounts is not income or spending.
+        'payee.transfer_acct': null,
+      })
+      .select(['date', 'amount'])
+      .limit(20000),
+  );
+
+  const byMonth = new Map<string, { income: number; spent: number }>();
+  for (const row of data as Array<{ date: string; amount: number }>) {
+    const month = row.date.slice(0, 7);
+    const entry = byMonth.get(month) ?? { income: 0, spent: 0 };
+    const amount = integerToAmount(row.amount);
+    if (amount >= 0) {
+      entry.income += amount;
+    } else {
+      entry.spent += Math.abs(amount);
+    }
+    byMonth.set(month, entry);
+  }
+
+  const rows = [...byMonth.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, v]) => ({
+      month,
+      income: Number(v.income.toFixed(2)),
+      spent: Number(v.spent.toFixed(2)),
+      net: Number((v.income - v.spent).toFixed(2)),
+    }));
+
+  // The current month is partial, so averaging it in understates the rate.
+  const complete = rows.filter(r => r.month !== monthUtils.currentMonth());
+  const averageNet = complete.length
+    ? Number(
+        (complete.reduce((sum, r) => sum + r.net, 0) / complete.length).toFixed(
+          2,
+        ),
+      )
+    : 0;
+
+  return {
+    months: rows,
+    averageMonthlyNet: averageNet,
+    note: "averageMonthlyNet covers whole months only; the current month is still in progress. Transfers between the user's own accounts are excluded.",
+  };
+}
+
 export const budgetTools = {
+  getMonthlySummary,
   getCategories,
   getSpendingByCategory,
   getTransactions,
@@ -237,6 +305,20 @@ export type BudgetToolName = keyof typeof budgetTools;
 
 // Gemini function-calling declarations for the tools above.
 export const budgetToolDeclarations = [
+  {
+    name: 'getMonthlySummary',
+    description:
+      "Income, spending and net saved per month, plus the average monthly net across whole months. Use this for savings-rate and 'how long until I can afford X' questions — it replaces looking up spending and income month by month.",
+    parameters: {
+      type: 'object',
+      properties: {
+        months: {
+          type: 'number',
+          description: 'How many months back to include, default 6',
+        },
+      },
+    },
+  },
   {
     name: 'getCategories',
     description:

@@ -29,6 +29,9 @@ const GEMINI_MODEL = 'gemini-3.6-flash';
  * user message plus a reply, so this is roughly the last two exchanges.
  */
 const ATTACHMENT_CONTEXT_MESSAGES = 4;
+
+/** Tool-calling rounds allowed before the model must answer with what it has. */
+const MAX_TOOL_ROUNDS = 10;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 export type ChatRole = 'user' | 'model';
@@ -81,6 +84,8 @@ The user can attach receipts, invoices and bank statements as images or PDFs. Wh
 5. Report honestly. Say what you added, to which account, and what you tagged it. If the tool tells you something was left uncategorized, say that plainly instead of claiming it was filed.
 
 When the user TELLS you something about themselves rather than asking a question — a savings goal, a payday, a commitment, a preference — that is not a request to analyse anything. Call rememberAboutMe for each durable fact, acknowledge it in one short sentence, and stop. Do not look up transactions, budgets or forecasts unless they actually asked. Never store their transactions or balances, only what they said about themselves.
+
+For "can I afford X" or "how long until I can save X" questions, call getMonthlySummary once and work from its averageMonthlyNet. Don't rebuild a savings rate month by month out of spending and income lookups — you have a limited number of lookups per answer, and that approach spends them all before you can answer.
 
 General rules:
 - Never state a number you did not get from a tool or read off a document.
@@ -140,6 +145,7 @@ async function callGemini(
   contents: GeminiContent[],
   memories: string[],
   background: string,
+  { allowTools = true }: { allowTools?: boolean } = {},
 ) {
   const res = await fetch(`${GEMINI_URL}?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
@@ -149,7 +155,11 @@ async function callGemini(
         parts: [{ text: buildSystemInstruction(memories, background) }],
       },
       contents,
-      tools: [{ functionDeclarations: allDeclarations }],
+      // Omitting tools forces a text answer, which is how the final
+      // round makes the model commit to what it already knows.
+      ...(allowTools
+        ? { tools: [{ functionDeclarations: allDeclarations }] }
+        : {}),
     }),
   });
 
@@ -239,8 +249,9 @@ export async function sendChatMessage(
   }));
   const actions: AgentAction[] = [];
 
-  // Guard against infinite tool-call loops.
-  for (let round = 0; round < 6; round++) {
+  // Guard against infinite tool-call loops. Planning questions legitimately
+  // need several lookups; running out now produces an answer, not a failure.
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const data = await callGemini(apiKey, contents, memories, background);
     const candidate = data.candidates?.[0];
     const parts: GeminiPart[] = candidate?.content?.parts ?? [];
@@ -293,12 +304,39 @@ export async function sendChatMessage(
     contents.push({ role: 'user', parts: responseParts });
   }
 
+  // Out of tool rounds. Everything looked up so far is still in `contents`,
+  // so ask for an answer built from that rather than discarding the work and
+  // showing a failure.
   console.warn(
-    '[AI Assistant] gave up after too many tool-call rounds',
-    contents,
+    '[AI Assistant] tool budget exhausted; answering from what was gathered',
   );
+  contents.push({
+    role: 'user',
+    parts: [
+      {
+        text: 'You have run out of lookups. Answer now using only what you have already gathered above. Do your best with the numbers you have, state briefly what you assumed, and do not ask to look anything else up.',
+      },
+    ],
+  });
+
+  try {
+    const data = await callGemini(apiKey, contents, memories, background, {
+      allowTools: false,
+    });
+    const parts: GeminiPart[] = data.candidates?.[0]?.content?.parts ?? [];
+    const text = parts
+      .map(p => ('text' in p ? p.text : ''))
+      .join('')
+      .trim();
+    if (text) {
+      return { text, actions };
+    }
+  } catch (err) {
+    console.error('[AI Assistant] final answer attempt failed', err);
+  }
+
   return {
-    text: 'That took too many steps to look up — try a narrower question (e.g. a specific month or category).',
+    text: 'That needed more lookups than I can do in one go — try narrowing it to a specific month or category.',
     actions,
   };
 }
