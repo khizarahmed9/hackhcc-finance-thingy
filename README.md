@@ -8,6 +8,19 @@ menu on Android.
 
 Built for HackRice 16 (Finance track) by **Francisco** and **Khizer**.
 
+> ### What we built this weekend
+>
+> This is a fork of [Actual Budget](https://github.com/actualbudget/actual), so
+> the history below the fork point belongs to its maintainers. Our work is the
+> assistant layer:
+>
+> **[→ All 31 of our commits, and the full diff](https://github.com/khizarahmed9/hackhcc-finance-thingy/compare/353e5dd26aa98503b2e88b9b25004c3ea5eeef7d...ai-finance-chatbot)**
+>
+> Most of it lives in
+> [`packages/desktop-client/src/components/chat/`](packages/desktop-client/src/components/chat).
+> See [Where our code lives](#where-our-code-lives) for the file-by-file
+> breakdown.
+
 ---
 
 ## What it does
