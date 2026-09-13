@@ -18,7 +18,7 @@ import { View } from '@actual-app/components/view';
 
 import { Link } from '#components/common/Link';
 import { MOBILE_NAV_HEIGHT } from '#components/mobile/MobileNavTabs';
-import { Page } from '#components/Page';
+import { Page, PageHeader } from '#components/Page';
 import { useGlobalPref } from '#hooks/useGlobalPref';
 
 import { ActionCard } from './ActionCard';
@@ -41,6 +41,15 @@ import { useVoice } from './useVoice';
 
 // Two questions and two actions, so the empty state teaches that this
 // assistant can change the budget and not only describe it.
+/**
+ * The conversation column. Centred rather than pinned to the sidebar, which
+ * left most of a wide screen empty. The page header is centred to the same
+ * width so the title stays aligned with the conversation beneath it — the
+ * header sits outside the page's 20px padding, so the same maxWidth and auto
+ * margins land both on the same left edge.
+ */
+const CHAT_WIDTH = 720;
+
 const SUGGESTIONS = [
   'How much did I spend this month?',
   'What bills are coming up?',
@@ -209,8 +218,10 @@ export function Chat() {
       <Page header={t('Assistant')}>
         <View
           style={{
-            maxWidth: 440,
+            maxWidth: CHAT_WIDTH,
             gap: 12,
+            marginLeft: 'auto',
+            marginRight: 'auto',
             paddingLeft: isNarrowWidth ? 16 : 0,
             paddingRight: isNarrowWidth ? 16 : 0,
           }}
@@ -236,7 +247,23 @@ export function Chat() {
   const isEmpty = messages.length === 0;
 
   return (
-    <Page header={t('Assistant')}>
+    <Page
+      header={
+        isNarrowWidth ? (
+          t('Assistant')
+        ) : (
+          <PageHeader
+            title={t('Assistant')}
+            style={{
+              width: '100%',
+              maxWidth: CHAT_WIDTH,
+              marginLeft: 'auto',
+              marginRight: 'auto',
+            }}
+          />
+        )
+      }
+    >
       <View
         onDragOver={(e: DragEvent) => {
           e.preventDefault();
@@ -250,8 +277,10 @@ export function Chat() {
         }}
         style={{
           flex: 1,
-          maxWidth: 720,
+          maxWidth: CHAT_WIDTH,
           width: '100%',
+          marginLeft: 'auto',
+          marginRight: 'auto',
           gap: 16,
           paddingLeft: isNarrowWidth ? 16 : 0,
           paddingRight: isNarrowWidth ? 16 : 0,
