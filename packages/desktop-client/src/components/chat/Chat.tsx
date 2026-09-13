@@ -26,10 +26,16 @@ import { useAssistantKeys } from './apiKeys';
 import { AttachmentChips } from './AttachmentChips';
 import { ACCEPTED_TYPES, toAttachment } from './attachments';
 import { ChatBubble } from './ChatBubble';
-import type { AgentAction, Attachment, ChatMessage } from './gemini';
+import type {
+  AgentAction,
+  Attachment,
+  ChatMessage,
+  ReplyChart,
+} from './gemini';
 import { sendChatMessage } from './gemini';
 import { InsightCard } from './InsightCard';
 import { loadInsights } from './insights';
+import { ReplyCharts } from './ReplyCharts';
 import { ThinkingIndicator } from './ThinkingIndicator';
 import { useVoice } from './useVoice';
 
@@ -49,9 +55,12 @@ export function Chat() {
   const [assistantBackground] = useGlobalPref('assistantBackground');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  // Keyed by the index of the model message the actions belong to.
+  // Both keyed by the index of the model message they belong to.
   const [actionsByMessage, setActionsByMessage] = useState<
     Record<number, AgentAction[]>
+  >({});
+  const [chartsByMessage, setChartsByMessage] = useState<
+    Record<number, ReplyChart[]>
   >({});
   const [insights, setInsights] = useState<string[]>([]);
   const [input, setInput] = useState('');
@@ -129,6 +138,13 @@ export function Chat() {
       );
       setMessages([...nextHistoryFinal, { role: 'model', text: reply.text }]);
 
+      if (reply.charts.length > 0) {
+        setChartsByMessage(prev => ({
+          ...prev,
+          [nextHistoryFinal.length]: reply.charts,
+        }));
+      }
+
       if (reply.actions.length > 0) {
         setActionsByMessage(prev => ({
           ...prev,
@@ -153,6 +169,7 @@ export function Chat() {
     voice.stopSpeaking();
     setMessages([]);
     setActionsByMessage({});
+    setChartsByMessage({});
     setPending([]);
     setRetryable(null);
     setError(null);
@@ -306,6 +323,9 @@ export function Chat() {
                   </View>
                 )}
                 <ChatBubble message={message} />
+                {chartsByMessage[i] && (
+                  <ReplyCharts charts={chartsByMessage[i]} />
+                )}
                 {actionsByMessage[i] && (
                   <ActionCard actions={actionsByMessage[i]} />
                 )}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
+import { Trans } from 'react-i18next';
 
 import { Button } from '@actual-app/components/button';
 import { Text } from '@actual-app/components/text';
@@ -25,7 +25,6 @@ import { Setting } from './UI';
  * around. Destructive, hence the two-step confirm rather than a modal.
  */
 export function ResetDemoSettings() {
-  const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [budgetId] = useMetadataPref('id');

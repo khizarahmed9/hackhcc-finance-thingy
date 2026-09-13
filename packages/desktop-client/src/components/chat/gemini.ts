@@ -201,10 +201,71 @@ export type AgentAction = {
   summary: string;
 };
 
+/**
+ * A tool result worth drawing. Some answers are far easier to read as a shape
+ * than as a paragraph of figures, so the two lookups that return series data
+ * are captured here and rendered under the reply.
+ */
+export type ReplyChart =
+  | {
+      kind: 'category';
+      title: string;
+      points: Array<{ label: string; value: number }>;
+    }
+  | {
+      kind: 'monthly';
+      title: string;
+      points: Array<{
+        label: string;
+        income: number;
+        spent: number;
+        net: number;
+      }>;
+    };
+
+/** Pulls a drawable series out of a tool result, when there is one. */
+function chartFromToolResult(tool: string, result: unknown): ReplyChart | null {
+  if (tool === 'getSpendingByCategory' && Array.isArray(result)) {
+    const points = (result as Array<{ category: string; spent: number }>)
+      .filter(r => r && typeof r.spent === 'number' && r.spent > 0)
+      .sort((a, b) => b.spent - a.spent)
+      .slice(0, 7)
+      .map(r => ({ label: r.category, value: r.spent }));
+    return points.length >= 2
+      ? { kind: 'category', title: 'Spending by category', points }
+      : null;
+  }
+
+  if (tool === 'getMonthlySummary' && result && typeof result === 'object') {
+    const months = (
+      result as { months?: Array<Record<string, number | string>> }
+    ).months;
+    if (!Array.isArray(months) || months.length < 2) {
+      return null;
+    }
+    return {
+      kind: 'monthly',
+      // Names what is drawn: the bars are net, not income and spending side
+      // by side.
+      title: 'Net saved by month',
+      points: months.slice(-6).map(m => ({
+        label: String(m.month ?? ''),
+        income: Number(m.income ?? 0),
+        spent: Number(m.spent ?? 0),
+        net: Number(m.net ?? 0),
+      })),
+    };
+  }
+
+  return null;
+}
+
 export type ChatReply = {
   text: string;
   /** Populated when the agent changed data, so the UI can offer an undo. */
   actions: AgentAction[];
+  /** Series worth drawing alongside the answer, if any lookup produced one. */
+  charts: ReplyChart[];
 };
 
 /**
@@ -248,6 +309,7 @@ export async function sendChatMessage(
     ],
   }));
   const actions: AgentAction[] = [];
+  const charts: ReplyChart[] = [];
 
   // Guard against infinite tool-call loops. Planning questions legitimately
   // need several lookups; running out now produces an answer, not a failure.
@@ -268,6 +330,7 @@ export async function sendChatMessage(
           .join('')
           .trim(),
         actions,
+        charts,
       };
     }
 
@@ -283,6 +346,19 @@ export async function sendChatMessage(
         '->',
         outcome,
       );
+
+      if ('result' in outcome) {
+        const chart = chartFromToolResult(functionCall.name, outcome.result);
+        // Keep the most recent series for a given shape, not every attempt.
+        if (chart) {
+          const existing = charts.findIndex(c => c.kind === chart.kind);
+          if (existing >= 0) {
+            charts[existing] = chart;
+          } else {
+            charts.push(chart);
+          }
+        }
+      }
 
       if (MUTATING_TOOLS.has(functionCall.name) && 'result' in outcome) {
         const changed = (outcome.result as { changed?: string })?.changed;
@@ -329,7 +405,7 @@ export async function sendChatMessage(
       .join('')
       .trim();
     if (text) {
-      return { text, actions };
+      return { text, actions, charts };
     }
   } catch (err) {
     console.error('[AI Assistant] final answer attempt failed', err);
@@ -338,5 +414,6 @@ export async function sendChatMessage(
   return {
     text: 'That needed more lookups than I can do in one go — try narrowing it to a specific month or category.',
     actions,
+    charts,
   };
 }
