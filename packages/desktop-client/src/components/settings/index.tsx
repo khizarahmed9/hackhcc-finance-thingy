@@ -29,6 +29,7 @@ import { CurrencySettings } from './Currency';
 import { ExperimentalFeatures } from './Experimental';
 import { ExportBudget } from './Export';
 import { FormatSettings } from './Format';
+import { GuideSettings } from './Guide';
 import { LanguageSettings } from './LanguageSettings';
 import { MemorySettings } from './Memory';
 import { RepairTransactions } from './RepairTransactions';
@@ -231,6 +232,7 @@ export function Settings() {
         {/* Sync, encryption and multi-file settings are omitted: this build
             is single-device and has no server to talk to. */}
         <About />
+        <GuideSettings />
         <AIAssistantSettings />
         <MemorySettings />
         <ThemeSettings />

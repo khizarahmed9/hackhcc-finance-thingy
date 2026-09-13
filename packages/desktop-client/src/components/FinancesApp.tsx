@@ -1,4 +1,4 @@
-import React, { useEffect, useEffectEvent, useRef } from 'react';
+import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useTranslation } from 'react-i18next';
@@ -45,6 +45,7 @@ import { ManageTagsPage } from './tags/ManageTagsPage';
 import { Titlebar } from './Titlebar';
 import { Tour } from './tour/Tour';
 import { TourProvider } from './tour/TourProvider';
+import { hasSeenGuide, WelcomeGuide } from './WelcomeGuide';
 
 function NarrowNotSupported({
   redirectTo = '/budget',
@@ -197,9 +198,21 @@ export function FinancesApp() {
 
   const scrollableRef = useRef<HTMLDivElement>(null);
 
+  // Opens once per device. People who had never used a budgeting app could not
+  // tell what accounts, budget and reports were for.
+  const [showGuide, setShowGuide] = useState(() => !hasSeenGuide());
+  useEffect(() => {
+    function reopen() {
+      setShowGuide(true);
+    }
+    window.addEventListener('wayne:open-guide', reopen);
+    return () => window.removeEventListener('wayne:open-guide', reopen);
+  }, []);
+
   return (
     <TourProvider>
       <View style={{ height: '100%' }}>
+        {showGuide && <WelcomeGuide onClose={() => setShowGuide(false)} />}
         <RouterBehaviors />
         <GlobalKeys />
         <CommandBar />
