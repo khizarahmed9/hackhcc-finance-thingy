@@ -255,10 +255,15 @@ export function Chat() {
           }}
         >
           {/* Anchors the conversation to the composer, so a short exchange
-              doesn't leave a page-height gap above the input. */}
+              doesn't leave a page-height gap above the input.
+
+              Everything in here sets flexShrink: 0. This is a flex column, so
+              by default a tall reply gets compressed below the height its text
+              needs; the text then paints outside its own box and over whatever
+              follows instead of making the container scroll. */}
           <View style={{ marginTop: 'auto', gap: 16 }}>
             {isEmpty && (
-              <View style={{ gap: 16, paddingTop: 4 }}>
+              <View style={{ gap: 16, paddingTop: 4, flexShrink: 0 }}>
                 {insights.length > 0 && (
                   <View style={{ gap: 8 }}>
                     {insights.map((insight, i) => (
@@ -294,7 +299,7 @@ export function Chat() {
             )}
 
             {messages.map((message, i) => (
-              <View key={i} style={{ gap: 8 }}>
+              <View key={i} style={{ gap: 8, flexShrink: 0 }}>
                 {message.attachments && (
                   <View style={{ alignSelf: 'flex-end' }}>
                     <AttachmentChips attachments={message.attachments} />
@@ -310,7 +315,9 @@ export function Chat() {
             {isLoading && <ThinkingIndicator />}
 
             {messages.length > 0 && !isLoading && (
-              <View style={{ flexDirection: 'row', paddingTop: 4 }}>
+              <View
+                style={{ flexDirection: 'row', paddingTop: 4, flexShrink: 0 }}
+              >
                 <Button variant="bare" onPress={handleNewConversation}>
                   <Trans>New conversation</Trans>
                 </Button>

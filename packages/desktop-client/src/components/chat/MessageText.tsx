@@ -59,7 +59,7 @@ export function MessageText({ text }: { text: string }) {
   const lines = text.split('\n');
 
   return (
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: 6, flexShrink: 0 }}>
       {lines.map((line, i) => {
         const trimmed = line.trim();
         if (!trimmed) {

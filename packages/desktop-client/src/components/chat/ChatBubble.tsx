@@ -18,6 +18,7 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
       <View
         style={{
           alignSelf: 'flex-end',
+          flexShrink: 0,
           maxWidth: '85%',
           backgroundColor: theme.buttonPrimaryBackground,
           borderRadius: 14,
@@ -33,7 +34,7 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
   }
 
   return (
-    <View style={{ alignSelf: 'stretch', paddingRight: 24 }}>
+    <View style={{ alignSelf: 'stretch', paddingRight: 24, flexShrink: 0 }}>
       <MessageText text={message.text} />
     </View>
   );
