@@ -22,13 +22,13 @@ build time.
 
 ## Server layout
 
-| Path | Purpose |
-| --- | --- |
-| `~/wayne` | Git checkout the server builds from |
-| `~/wayne/.env.local` | API keys, mode 600, not in git |
-| `~/wayne-deploy.sh` | Pull, build, swap |
-| `/var/www/wayne` | What nginx serves |
-| `/etc/nginx/sites-available/wayne` | nginx config |
+| Path                               | Purpose                             |
+| ---------------------------------- | ----------------------------------- |
+| `~/wayne`                          | Git checkout the server builds from |
+| `~/wayne/.env.local`               | API keys, mode 600, not in git      |
+| `~/wayne-deploy.sh`                | Pull, build, swap                   |
+| `/var/www/wayne`                   | What nginx serves                   |
+| `/etc/nginx/sites-available/wayne` | nginx config                        |
 
 ## Operations
 

@@ -17,6 +17,7 @@ import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
 
 import { Link } from '#components/common/Link';
+import { MOBILE_NAV_HEIGHT } from '#components/mobile/MobileNavTabs';
 import { Page } from '#components/Page';
 import { useGlobalPref } from '#hooks/useGlobalPref';
 
@@ -237,6 +238,8 @@ export function Chat() {
           gap: 16,
           paddingLeft: isNarrowWidth ? 16 : 0,
           paddingRight: isNarrowWidth ? 16 : 0,
+          // Keep the composer clear of the mobile tab bar.
+          paddingBottom: isNarrowWidth ? MOBILE_NAV_HEIGHT : 0,
           outline: isDropping ? `2px dashed ${theme.pageTextLink}` : 'none',
           outlineOffset: 4,
           borderRadius: 6,

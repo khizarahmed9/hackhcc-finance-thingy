@@ -479,6 +479,9 @@ export function FinancesApp() {
                 </View>
 
                 <Routes>
+                  {/* Without this the assistant has no way back on a phone:
+                      installed as a PWA there is no browser chrome either. */}
+                  <Route path="/chat" element={<MobileNavTabs />} />
                   <Route path="/budget" element={<MobileNavTabs />} />
                   <Route path="/accounts" element={<MobileNavTabs />} />
                   <Route path="/settings" element={<MobileNavTabs />} />
