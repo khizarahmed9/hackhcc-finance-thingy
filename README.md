@@ -14,7 +14,10 @@ Built for HackRice 16 (Finance track) by **Francisco** and **Khizer**.
 > the history below the fork point belongs to its maintainers. Our work is the
 > assistant layer:
 >
-> **[→ All 31 of our commits, and the full diff](https://github.com/khizarahmed9/hackhcc-finance-thingy/compare/353e5dd26aa98503b2e88b9b25004c3ea5eeef7d...ai-finance-chatbot)**
+> **[→ Every commit we made, and the full diff](https://github.com/khizarahmed9/hackhcc-finance-thingy/compare/353e5dd26aa98503b2e88b9b25004c3ea5eeef7d...ai-finance-chatbot)**
+>
+> That page counts them for you, so it stays right as we keep working. At the
+> time of writing: 36 commits across 81 files.
 >
 > Most of it lives in
 > [`packages/desktop-client/src/components/chat/`](packages/desktop-client/src/components/chat).
