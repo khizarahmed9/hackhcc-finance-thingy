@@ -271,18 +271,53 @@ export function Chat() {
             paddingRight: 4,
           }}
         >
-          {/* Anchors the conversation to the composer, so a short exchange
-              doesn't leave a page-height gap above the input.
+          {/* Anchored to the composer once there is a conversation, so a short
+              exchange doesn't leave a page-height gap above the input. The
+              empty state sits at the top instead — there is nothing to anchor,
+              and pushing it down leaves the page looking unfinished.
 
               Everything in here sets flexShrink: 0. This is a flex column, so
               by default a tall reply gets compressed below the height its text
               needs; the text then paints outside its own box and over whatever
               follows instead of making the container scroll. */}
-          <View style={{ marginTop: 'auto', gap: 16 }}>
+          <View style={{ marginTop: isEmpty ? 0 : 'auto', gap: 16 }}>
             {isEmpty && (
-              <View style={{ gap: 16, paddingTop: 4, flexShrink: 0 }}>
+              <View style={{ gap: 22, paddingTop: 2, flexShrink: 0 }}>
+                {/* Sits under the page title, so it reads as an opening line
+                    rather than a second heading competing with it. */}
+                <View style={{ gap: 7, maxWidth: '54ch', paddingTop: 6 }}>
+                  <Text
+                    style={{
+                      fontSize: 19,
+                      fontWeight: 600,
+                      letterSpacing: '-0.01em',
+                      color: theme.pageText,
+                    }}
+                  >
+                    <Trans>Ask, or tell me what to change.</Trans>
+                  </Text>
+                  <Text
+                    style={{ color: theme.pageTextSubdued, lineHeight: 1.55 }}
+                  >
+                    <Trans>
+                      I can look things up, move money between categories, read
+                      a receipt you drop in, or listen if you would rather talk.
+                      Anything I change can be undone.
+                    </Trans>
+                  </Text>
+                </View>
                 {insights.length > 0 && (
                   <View style={{ gap: 8 }}>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        letterSpacing: '0.07em',
+                        textTransform: 'uppercase',
+                        color: theme.pageTextSubdued,
+                      }}
+                    >
+                      <Trans>Worth knowing</Trans>
+                    </Text>
                     {insights.map((insight, i) => (
                       <InsightCard key={i}>{insight}</InsightCard>
                     ))}
@@ -292,7 +327,9 @@ export function Chat() {
                 <View style={{ gap: 8 }}>
                   <Text
                     style={{
-                      fontSize: 13,
+                      fontSize: 12,
+                      letterSpacing: '0.07em',
+                      textTransform: 'uppercase',
                       color: theme.pageTextSubdued,
                     }}
                   >

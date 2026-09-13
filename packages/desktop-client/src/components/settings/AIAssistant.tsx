@@ -45,8 +45,8 @@ export function AIAssistantSettings() {
         <Trans>
           <strong>AI Assistant</strong> chats with you about your budget using
           Google Gemini, grounded in your real transactions and budget data.
-          Replies can optionally be read aloud with ElevenLabs. Keys never leave
-          this device.
+          Replies can optionally be read aloud with ElevenLabs. Keys are stored
+          on this device and sent only to the service they belong to.
         </Trans>
       </Text>
       <View style={{ gap: 10, maxWidth: 400 }}>
