@@ -33,6 +33,7 @@ import { LanguageSettings } from './LanguageSettings';
 import { MemorySettings } from './Memory';
 import { RepairTransactions } from './RepairTransactions';
 import { ResetCache } from './Reset';
+import { ResetDemoSettings } from './ResetDemo';
 import { ThemeSettings } from './Themes';
 import { AdvancedToggle, Setting } from './UI';
 
@@ -53,7 +54,9 @@ function About() {
         <strong>{BRAND.name}</strong>{' '}
         <Trans>
           is a private, local-first money manager with an AI assistant that
-          works on your real budget. Nothing leaves this device.
+          works on your real budget. Your budget file stays on this device —
+          only what is needed to answer a question is sent, straight from your
+          browser.
         </Trans>
       </Text>
       <View
@@ -236,6 +239,7 @@ export function Settings() {
         <LanguageSettings />
         <BudgetTypeSettings />
         <ExportBudget />
+        <ResetDemoSettings />
         <AdvancedToggle>
           <AdvancedAbout />
           <ResetCache />
