@@ -17,8 +17,8 @@ export function GuideSettings() {
       <Text>
         <Trans>
           <strong>Guide</strong> explains what each part of the app is for, in
-          plain language. It appears the first time you open the app on a
-          device.
+          plain language. It opens each time the app loads; this reopens it
+          without reloading.
         </Trans>
       </Text>
       <View style={{ flexDirection: 'row' }}>

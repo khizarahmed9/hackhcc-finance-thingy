@@ -17,26 +17,6 @@ import { View } from '@actual-app/components/view';
 
 import { BRAND } from '#brand';
 
-const SEEN_KEY = 'wayne.guide.seen';
-
-/** Opens itself once per device; Settings can reopen it afterwards. */
-export function hasSeenGuide() {
-  try {
-    return window.localStorage.getItem(SEEN_KEY) === 'true';
-  } catch {
-    // Blocked storage: better to show it again than never.
-    return false;
-  }
-}
-
-function markGuideSeen() {
-  try {
-    window.localStorage.setItem(SEEN_KEY, 'true');
-  } catch {
-    // Not fatal — it just opens again next time.
-  }
-}
-
 type Section = {
   icon: typeof SvgWallet;
   label: string;
@@ -61,7 +41,6 @@ export function WelcomeGuide({ onClose }: WelcomeGuideProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => {
-    markGuideSeen();
     onClose();
   }, [onClose]);
 

@@ -45,7 +45,7 @@ import { ManageTagsPage } from './tags/ManageTagsPage';
 import { Titlebar } from './Titlebar';
 import { Tour } from './tour/Tour';
 import { TourProvider } from './tour/TourProvider';
-import { hasSeenGuide, WelcomeGuide } from './WelcomeGuide';
+import { WelcomeGuide } from './WelcomeGuide';
 
 function NarrowNotSupported({
   redirectTo = '/budget',
@@ -198,9 +198,9 @@ export function FinancesApp() {
 
   const scrollableRef = useRef<HTMLDivElement>(null);
 
-  // Opens once per device. People who had never used a budgeting app could not
-  // tell what accounts, budget and reports were for.
-  const [showGuide, setShowGuide] = useState(() => !hasSeenGuide());
+  // Opens on every load, deliberately: this build is handed to people who have
+  // never used a budgeting app, and each of them arrives fresh.
+  const [showGuide, setShowGuide] = useState(true);
   useEffect(() => {
     function reopen() {
       setShowGuide(true);
