@@ -6,7 +6,7 @@ real budget instead of describing it.
 **Live: <https://knightfall.wiki>** — it also installs as an app from Chrome's
 menu on Android.
 
-Built for HackRice 16 (Finance track).
+Built for HackRice 16 (Finance track) by **Francisco** and **Khizer**.
 
 ---
 
