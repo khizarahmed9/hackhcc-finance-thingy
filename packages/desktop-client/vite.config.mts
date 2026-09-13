@@ -360,7 +360,11 @@ export default defineConfig(async ({ mode, command }) => {
       mode === 'desktop'
         ? undefined
         : VitePWA({
-            registerType: 'prompt',
+            // 'prompt' requires the app to offer a refresh, and nothing here
+            // ever does: the worker would cache the first version a device
+            // saw and serve it forever. An installed PWA has no address bar
+            // to force a reload from, so a deploy would never reach it.
+            registerType: 'autoUpdate',
             // TODO:  The plugin worker build is currently disabled due to issues with offline support. Fix this
             // strategies: 'injectManifest',
             // srcDir: 'service-worker',
